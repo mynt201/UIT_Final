@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.34.8",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^7.3.6",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^0.27.2",
     "react": "^19.2.0",

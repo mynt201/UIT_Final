@@ -9,13 +9,13 @@ const Register = () => {
       <div className='w-full max-w-lg'>
         <div className='flex flex-col justify-center'>
           <div className='text-center mb-6'>
-            <h2 className='text-3xl md:text-4xl font-extrabold'>Sign up</h2>
+            <h2 className='text-3xl md:text-4xl font-extrabold'>Đăng ký</h2>
           </div>
 
           <form>
             <div className='mb-6'>
-              <label className='block mb-2 font-extrabold'>Full Name</label>
-              <FormInput type='text' placeholder='Name' />
+              <label className='block mb-2 font-extrabold'>Họ và tên</label>
+              <FormInput type='text' placeholder='Họ và tên' />
             </div>
 
             <div className='mb-6'>
@@ -24,22 +24,16 @@ const Register = () => {
             </div>
 
             <div className='mb-6'>
-              <label className='block mb-2 font-extrabold'>Password</label>
-              <FormInput type='password' placeholder='**********' />
+              <label className='block mb-2 font-extrabold'>Mật khẩu</label>
+              <FormInput type='Mật khẩu' placeholder='**********' />
             </div>
 
-            <div className='flex justify-between mb-6'>
-              <a className='font-extrabold hover:underline' href='#'>
-                Forgot your password?
-              </a>
-            </div>
-
-            <Button>Sign in</Button>
+            <Button>Đăng ký</Button>
 
             <p className='text-center font-extrabold mt-4'>
-              Don&rsquo;t have an account?{' '}
+              Bạn đã có tài khoản chưa?{' '}
               <Link className='text-red-500 hover:underline' to={LOGIN_PATH}>
-                Sign in
+                Đăng nhập
               </Link>
             </p>
           </form>

@@ -1,142 +1,141 @@
 import { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
-import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import Graphic from '@arcgis/core/Graphic';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Legend from '@arcgis/core/widgets/Legend';
 import LayerList from '@arcgis/core/widgets/LayerList';
-import { calcFloodRiskIndex } from './constants';
 
-export default function FloodMap() {
+// Hàm giả lập tính flood risk
+const calcFloodRiskIndex = (exposure: number, susceptibility: number, resilience: number) => {
+  return (exposure + susceptibility) / resilience;
+};
+
+// Dữ liệu phường giả lập
+const mockWards = [
+  {
+    ward_name: 'Phường 1',
+    geometry: {
+      type: 'polygon',
+      rings: [
+        [
+          [106.7, 10.81],
+          [106.71, 10.81],
+          [106.71, 10.82],
+          [106.7, 10.82],
+          [106.7, 10.81],
+        ],
+      ],
+    },
+    population_density: 5000,
+    rainfall: 120,
+    low_elevation: 2,
+    urban_land: 3,
+    drainage_capacity: 5,
+  },
+  {
+    ward_name: 'Phường 2',
+    geometry: {
+      type: 'polygon',
+      rings: [
+        [
+          [106.705, 10.805],
+          [106.715, 10.805],
+          [106.715, 10.815],
+          [106.705, 10.815],
+          [106.705, 10.805],
+        ],
+      ],
+    },
+    population_density: 8000,
+    rainfall: 200,
+    low_elevation: 4,
+    urban_land: 5,
+    drainage_capacity: 4,
+  },
+  {
+    ward_name: 'Phường 3',
+    geometry: {
+      type: 'polygon',
+      rings: [
+        [
+          [106.71, 10.8],
+          [106.72, 10.8],
+          [106.72, 10.81],
+          [106.71, 10.81],
+          [106.71, 10.8],
+        ],
+      ],
+    },
+    population_density: 3000,
+    rainfall: 80,
+    low_elevation: 1,
+    urban_land: 2,
+    drainage_capacity: 6,
+  },
+];
+
+export default function FloodMapMock() {
   const mapDiv = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!mapDiv.current) return;
 
-    /* ================= MAP ================= */
-
-    const map = new Map({
-      basemap: 'dark-gray-vector',
-    });
-
+    const map = new Map({ basemap: 'dark-gray-vector' });
     const view = new MapView({
       container: mapDiv.current,
       map,
-      center: [106.7, 10.8], // TP.HCM
-      zoom: 11,
+      center: [106.71, 10.805],
+      zoom: 14,
     });
 
-    /* ================= BASE DATA LAYERS ================= */
+    // Layer chứa các phường
+    const wardLayer = new GraphicsLayer({ title: 'Bản đồ rủi ro ngập lụt' });
 
-    const riverLayer = new FeatureLayer({
-      url: 'RIVER_LAYER_URL',
-      title: 'Sông rạch',
-      opacity: 0.7,
-    });
+    // Thêm từng phường
+    mockWards.forEach((ward) => {
+      const exposure = ward.population_density / 1000 + ward.rainfall / 200;
+      const susceptibility = ward.low_elevation + ward.urban_land;
+      const resilience = ward.drainage_capacity || 1;
 
-    const terrainLayer = new FeatureLayer({
-      url: 'TERRAIN_LAYER_URL',
-      title: 'Địa hình',
-      visible: false,
-    });
+      const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      const floodRiskColorScale = Math.min(1, floodRisk / 5); // scale 0→1 để màu
 
-    const rainfallLayer = new FeatureLayer({
-      url: 'RAINFALL_LAYER_URL',
-      title: 'Lượng mưa',
-      visible: false,
-    });
+      // Màu đỏ gradient
+      const color = [
+        255,
+        200 - 120 * floodRiskColorScale, // đỏ nhạt → đỏ đậm
+        200 - 200 * floodRiskColorScale,
+        0.5 + 0.4 * floodRiskColorScale, // alpha tăng theo rủi ro
+      ];
 
-    const populationLayer = new FeatureLayer({
-      url: 'POPULATION_LAYER_URL',
-      title: 'Dân số',
-      visible: false,
-    });
-
-    /* ================= FLOOD RISK LAYER ================= */
-
-    const wardLayer = new FeatureLayer({
-      url: 'WARD_LAYER_URL',
-      title: 'Bản đồ rủi ro ngập lụt',
-      outFields: ['*'],
-      popupTemplate: {
-        title: '{ward_name}',
-        content: `
-          <b>Mật độ dân số:</b> {population_density}<br/>
-          <b>Lượng mưa:</b> {rainfall}<br/>
-          <b>Độ trũng:</b> {low_elevation}<br/>
-          <b>Thoát nước:</b> {drainage_capacity}<br/>
-          <hr/>
-          <b>Flood Risk Index:</b> {flood_risk}
-        `,
-      },
-    });
-
-    /* ========== TÍNH RỦI RO TRỰC TIẾP ========== */
-
-    wardLayer.when(async () => {
-      const result = await wardLayer.queryFeatures();
-
-      result.features.forEach((feature) => {
-        const exposure =
-          feature.attributes.population_density / 1000 + feature.attributes.rainfall / 200;
-
-        const susceptibility = feature.attributes.low_elevation + feature.attributes.urban_land;
-
-        const resilience = feature.attributes.drainage_capacity || 1;
-
-        feature.attributes.flood_risk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      const graphic = new Graphic({
+        geometry: ward.geometry,
+        attributes: { ward_name: ward.ward_name, flood_risk: floodRisk },
+        symbol: {
+          type: 'simple-fill',
+          color,
+          outline: { width: 0.5, color: [100, 0, 0, 0.8] },
+        },
+        popupTemplate: {
+          title: '{ward_name}',
+          content: `
+            <b>Flood Risk Index:</b> {flood_risk}
+          `,
+        },
       });
+
+      wardLayer.add(graphic);
     });
 
-    /* ========== STYLE GIỐNG HÌNH BẠN GỬI ========== */
+    map.add(wardLayer);
 
-    wardLayer.renderer = {
-      type: 'class-breaks',
-      field: 'flood_risk',
-      classBreakInfos: [
-        {
-          minValue: 0,
-          maxValue: 0.4,
-          label: 'Rủi ro thấp',
-          symbol: {
-            type: 'simple-fill',
-            color: [180, 230, 220, 0.75],
-            outline: { width: 0.2, color: [30, 30, 30, 0.3] },
-          },
-        },
-        {
-          minValue: 0.4,
-          maxValue: 0.7,
-          label: 'Rủi ro trung bình',
-          symbol: {
-            type: 'simple-fill',
-            color: [255, 190, 190, 0.75],
-            outline: { width: 0.2, color: [30, 30, 30, 0.3] },
-          },
-        },
-        {
-          minValue: 0.7,
-          maxValue: 2,
-          label: 'Rủi ro cao',
-          symbol: {
-            type: 'simple-fill',
-            color: [220, 70, 70, 0.85],
-            outline: { width: 0.2, color: [30, 30, 30, 0.3] },
-          },
-        },
-      ],
-    } as unknown;
-
-    /* ================= ADD LAYERS ================= */
-
-    map.addMany([terrainLayer, riverLayer, rainfallLayer, populationLayer, wardLayer]);
-
-    /* ================= UI ================= */
-
+    // UI
     view.ui.add(new Legend({ view }), 'bottom-left');
     view.ui.add(new LayerList({ view }), 'top-right');
 
     return () => view.destroy();
   }, []);
 
-  return <div ref={mapDiv} style={{ height: '700px', width: '100%' }} />;
+  return <div ref={mapDiv} style={{ height: '500px', width: '100%' }} />;
 }
