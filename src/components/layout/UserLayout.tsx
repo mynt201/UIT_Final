@@ -1,7 +1,11 @@
-import React from 'react';
+import { Outlet } from 'react-router-dom';
 
 const UserLayout = () => {
-  return <div>UserLayout</div>;
+  return (
+    <main className='min-h-screen'>
+      <Outlet />
+    </main>
+  );
 };
 
 export default UserLayout;

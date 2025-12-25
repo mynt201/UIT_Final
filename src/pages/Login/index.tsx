@@ -30,39 +30,41 @@ const Login = () => {
   };
 
   return (
-    <div className='container px-4 mx-auto min-h-screen flex items-center'>
-      <div className='max-w-lg mx-auto '>
+    <div className='container px-4 mx-auto min-h-screen flex items-center justify-center'>
+      <div className='max-w-lg w-full'>
         <div className='text-center mb-6'>
           <h2 className='text-3xl md:text-4xl font-extrabold'>Sign in</h2>
         </div>
-        <form action=''>
+
+        <form>
           <div className='mb-6'>
-            <label className='block mb-2 font-extrabold' htmlFor=''>
-              Email
-            </label>
-            <FormInput type='Email' placeholder='Email' />
+            <label className='block mb-2 font-extrabold'>Email</label>
+            <FormInput type='email' placeholder='Email' />
           </div>
+
           <div className='mb-6'>
-            <label className='block mb-2 font-extrabold' htmlFor=''>
-              Password
-            </label>
+            <label className='block mb-2 font-extrabold'>Password</label>
             <FormInput type='password' placeholder='**********' />
           </div>
+
           <div className='flex flex-wrap -mx-4 mb-6 items-center justify-between'>
             <div className='w-full lg:w-auto px-4 mb-4 lg:mb-0'>
-              <label htmlFor=''>
+              <label className='flex items-center gap-1'>
                 <input type='checkbox' />
-                <span className='ml-1 font-extrabold'>Remember me</span>
+                <span className='font-extrabold'>Remember me</span>
               </label>
             </div>
+
             <div className='w-full lg:w-auto px-4'>
-              <Link className='inline-block font-extrabold hover:underline' to={REGISTER_PATH}>
+              <Link className='font-extrabold hover:underline' to={REGISTER_PATH}>
                 Forgot your password?
               </Link>
             </div>
           </div>
+
           <Button>Sign in</Button>
-          <p className='text-center font-extrabold'>
+
+          <p className='text-center font-extrabold mt-4'>
             Don&rsquo;t have an account?{' '}
             <Link className='text-red-500 hover:underline' to={REGISTER_PATH}>
               Sign up

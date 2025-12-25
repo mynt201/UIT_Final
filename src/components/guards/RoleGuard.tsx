@@ -1,26 +1,24 @@
-import { Navigate, Outlet } from 'react-router-dom';
-
-type Role = 'admin' | 'user';
+// components/guards/RoleGuard.tsx
+import type { JSX } from 'react';
+import { Navigate } from 'react-router-dom';
 
 type Props = {
-  allowRoles: Role[];
+  allowRoles: Array<'admin' | 'user'>;
+  children: JSX.Element;
 };
 
-const RoleGuard = ({ allowRoles }: Props) => {
-  const authRaw = localStorage.getItem('auth');
-  const auth = authRaw ? JSON.parse(authRaw) : null;
+const RoleGuard = ({ allowRoles, children }: Props) => {
+  const auth = JSON.parse(localStorage.getItem('auth') || 'null');
 
-  // 1. Chưa login
-  if (!auth?.token) {
-    return <Navigate to='/login' replace />;
-  }
+  // if (!auth) {
+  //   return <Navigate to='/login' replace />;
+  // }
 
-  // 2. Sai role
-  if (!allowRoles.includes(auth.role)) {
-    return <Navigate to='/' replace />;
-  }
+  // if (!allowRoles.includes(auth.role)) {
+  //   return <Navigate to='/403' replace />;
+  // }
 
-  return <Outlet />;
+  return children;
 };
 
 export default RoleGuard;
