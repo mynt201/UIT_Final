@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import AdminLayout from '../components/layout/AdminLayout';
-import UserLayout from '../components/layout/UserLayout';
+import MainLayout from '../components/layout/MainLayout';
 import RoleGuard from '../components/guards/RoleGuard';
 
 import Login from '../pages/Login';
@@ -8,6 +8,9 @@ import Register from '../pages/Register';
 
 import { LOGIN_PATH, REGISTER_PATH } from './routePath';
 import PageView from '../pages/PageView/Index';
+import RiskReportPage from '../pages/RiskReport/Index';
+import UserProfilePage from '../pages/UserProfile/Index';
+import SettingsPage from '../pages/Settings/Index';
 import Index from '../pages/Dashboard';
 
 export const router = createBrowserRouter([
@@ -32,13 +35,25 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <RoleGuard allowRoles={['user', 'admin']}>
-        <UserLayout />
+        <MainLayout />
       </RoleGuard>
     ),
     children: [
       {
         index: true,
         element: <PageView />,
+      },
+      {
+        path: 'risk-report',
+        element: <RiskReportPage />,
+      },
+      {
+        path: 'profile',
+        element: <UserProfilePage />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
       },
     ],
   },
