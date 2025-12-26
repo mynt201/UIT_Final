@@ -1,13 +1,14 @@
 import './App.css';
-import { ThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 // import CssBaseline from '@mui/material/CssBaseline';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // theme.js
 import { createTheme } from '@mui/material/styles';
 
-const theme = createTheme({
+const muiTheme = createTheme({
   palette: {
     background: {
       default: '#f3f4f6',
@@ -19,9 +20,11 @@ const theme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      {/* <CssBaseline /> */}
-      <RouterProvider router={router} />;
+    <ThemeProvider>
+      <MuiThemeProvider theme={muiTheme}>
+        {/* <CssBaseline /> */}
+        <RouterProvider router={router} />
+      </MuiThemeProvider>
     </ThemeProvider>
   );
 }

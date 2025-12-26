@@ -1,19 +1,7 @@
 import { IoMdClose } from 'react-icons/io';
 import { getRiskColor } from './floodRiskUtils';
-
-interface WardDetail {
-  ward_name: string;
-  flood_risk: number;
-  risk_level: string;
-  population_density: number;
-  rainfall: number;
-  low_elevation: number;
-  urban_land: number;
-  drainage_capacity: number;
-  exposure: number;
-  susceptibility: number;
-  resilience: number;
-}
+import { useTheme } from '../../../contexts/ThemeContext';
+import type { WardDetail } from '../../../types';
 
 interface WardDetailPanelProps {
   ward: WardDetail | null;
@@ -21,6 +9,8 @@ interface WardDetailPanelProps {
 }
 
 export default function WardDetailPanel({ ward, onClose }: WardDetailPanelProps) {
+  const { theme } = useTheme();
+  
   if (!ward) return null;
 
   const riskLevel =
@@ -100,7 +90,9 @@ export default function WardDetailPanel({ ward, onClose }: WardDetailPanelProps)
           </div>
         </div>
 
-        <button className='w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors'>
+        <button className={`w-full mt-6 py-3 text-white font-semibold rounded-lg transition-colors ${
+          theme === 'light' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'
+        }`}>
           Xem chi tiết đánh giá rủi ro
         </button>
       </div>

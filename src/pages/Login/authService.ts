@@ -1,76 +1,141 @@
-export interface User {
-  id: string;
+import type {
+  User,
+  AuthData,
+  LoginCredentials,
+  LoginResponse,
+  RegisterCredentials,
+  RegisterResponse,
+  UpdateUserProfileData,
+  UserWithPassword,
+} from "../../types";
+import { MOCK_USERS } from "../../mockData";
+
+const STORAGE_KEY = "auth";
+const USERS_STORAGE_KEY = "mock_users";
+
+// User Management Functions
+export const getAllUsers = (): User[] => {
+  const storedUsers = getStoredUsers();
+  return storedUsers.map(({ password, ...user }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _ = password;
+    return user;
+  });
+};
+
+export const getUserById = (id: string): User | null => {
+  const storedUsers = getStoredUsers();
+  const user = storedUsers.find((u) => u.id === id);
+  if (!user) return null;
+  const { password, ...userWithoutPassword } = user;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = password;
+  return userWithoutPassword;
+};
+
+export const createUser = async (userData: {
   username: string;
   email: string;
-  role: 'admin' | 'user';
+  password: string;
+  role: "admin" | "user";
   fullName?: string;
   phone?: string;
   address?: string;
-  createdAt?: string;
-  lastLogin?: string;
-  avatar?: string;
-}
+}): Promise<User> => {
+  await delay(300);
+  const storedUsers = getStoredUsers();
 
-export interface AuthData {
-  token: string;
-  user: User;
-  expiresAt?: number;
-}
+  // Check if username or email already exists
+  if (storedUsers.some((u) => u.username === userData.username)) {
+    throw new Error("Tên người dùng đã tồn tại");
+  }
+  if (storedUsers.some((u) => u.email === userData.email)) {
+    throw new Error("Email đã tồn tại");
+  }
 
-export interface LoginCredentials {
-  username: string;
-  password: string;
-}
+  const newUser: UserWithPassword = {
+    id: Date.now().toString(),
+    username: userData.username,
+    email: userData.email,
+    password: userData.password,
+    role: userData.role,
+    fullName: userData.fullName,
+    phone: userData.phone,
+    address: userData.address,
+    createdAt: new Date().toISOString(),
+    lastLogin: undefined,
+  };
 
-export interface LoginResponse {
-  token: string;
-  user: User;
-}
+  storedUsers.push(newUser as (typeof storedUsers)[0]);
+  saveUsers(storedUsers);
 
-export interface RegisterCredentials {
-  username: string;
-  email: string;
-  password: string;
-}
+  const { password, ...userWithoutPassword } = newUser;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = password;
+  return userWithoutPassword;
+};
 
-export interface RegisterResponse {
-  token: string;
-  user: User;
-}
+export const updateUser = async (
+  id: string,
+  userData: Partial<Omit<User, "id" | "createdAt">> & { password?: string },
+): Promise<User> => {
+  await delay(300);
+  const storedUsers = getStoredUsers();
+  const userIndex = storedUsers.findIndex((u) => u.id === id);
 
-const STORAGE_KEY = 'auth';
-const USERS_STORAGE_KEY = 'mock_users';
+  if (userIndex === -1) {
+    throw new Error("Người dùng không tồn tại");
+  }
 
-const MOCK_USERS = [
-  {
-    id: '1',
-    username: 'admin',
-    email: 'admin@example.com',
-    role: 'admin' as const,
-    password: '123456',
-    fullName: 'Quản trị viên',
-    phone: '0123456789',
-    address: '123 Đường ABC, Quận 1, TP.HCM',
-    createdAt: new Date('2024-01-01').toISOString(),
-    lastLogin: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    username: 'user',
-    email: 'user@example.com',
-    role: 'user' as const,
-    password: '123456',
-    fullName: 'Người dùng',
-    phone: '0987654321',
-    address: '456 Đường XYZ, Quận 2, TP.HCM',
-    createdAt: new Date('2024-01-15').toISOString(),
-    lastLogin: new Date().toISOString(),
-  },
-];
+  // Check if username or email already exists (excluding current user)
+  if (userData.username) {
+    if (
+      storedUsers.some((u) => u.id !== id && u.username === userData.username)
+    ) {
+      throw new Error("Tên người dùng đã tồn tại");
+    }
+  }
+  if (userData.email) {
+    if (storedUsers.some((u) => u.id !== id && u.email === userData.email)) {
+      throw new Error("Email đã tồn tại");
+    }
+  }
+
+  const currentUser = storedUsers[userIndex];
+  const updatedUser: UserWithPassword = {
+    ...currentUser,
+    ...userData,
+    password:
+      userData.password !== undefined
+        ? userData.password
+        : currentUser.password,
+    lastLogin: currentUser.lastLogin,
+  };
+
+  storedUsers[userIndex] = updatedUser as (typeof storedUsers)[0];
+  saveUsers(storedUsers);
+
+  const { password, ...userWithoutPassword } = updatedUser;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = password;
+  return userWithoutPassword;
+};
+
+export const deleteUser = async (id: string): Promise<void> => {
+  await delay(300);
+  const storedUsers = getStoredUsers();
+  const filteredUsers = storedUsers.filter((u) => u.id !== id);
+
+  if (filteredUsers.length === storedUsers.length) {
+    throw new Error("Người dùng không tồn tại");
+  }
+
+  saveUsers(filteredUsers);
+};
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const getStoredUsers = (): typeof MOCK_USERS => {
+const getStoredUsers = (): UserWithPassword[] => {
   try {
     const stored = localStorage.getItem(USERS_STORAGE_KEY);
     if (stored) {
@@ -83,22 +148,26 @@ const getStoredUsers = (): typeof MOCK_USERS => {
   }
 };
 
-const saveUsers = (users: typeof MOCK_USERS): void => {
+const saveUsers = (users: UserWithPassword[]): void => {
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 };
 
-export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+export const login = async (
+  credentials: LoginCredentials,
+): Promise<LoginResponse> => {
   const { username, password } = credentials;
 
   await delay(500);
 
   const storedUsers = getStoredUsers();
   const user = storedUsers.find(
-    (u) => (u.username === username || u.email === username) && u.password === password
+    (u) =>
+      (u.username === username || u.email === username) &&
+      u.password === password,
   );
 
   if (!user) {
-    throw new Error('Tài khoản hoặc mật khẩu không đúng');
+    throw new Error("Tài khoản hoặc mật khẩu không đúng");
   }
 
   // Update lastLogin
@@ -181,13 +250,13 @@ export const isAuthenticated = (): boolean => {
   return user !== null;
 };
 
-export const hasRole = (role: 'admin' | 'user'): boolean => {
+export const hasRole = (role: "admin" | "user"): boolean => {
   const user = getCurrentUser();
   return user?.role === role;
 };
 
 export const isAdmin = (): boolean => {
-  return hasRole('admin');
+  return hasRole("admin");
 };
 
 export const refreshAuth = (): AuthData | null => {
@@ -210,21 +279,25 @@ export const refreshAuth = (): AuthData | null => {
   }
 };
 
-export const register = async (credentials: RegisterCredentials): Promise<RegisterResponse> => {
+export const register = async (
+  credentials: RegisterCredentials,
+): Promise<RegisterResponse> => {
   const { username, email, password } = credentials;
 
   await delay(500);
 
   const storedUsers = getStoredUsers();
 
-  const existingUser = storedUsers.find((u) => u.username === username || u.email === email);
+  const existingUser = storedUsers.find(
+    (u) => u.username === username || u.email === email,
+  );
 
   if (existingUser) {
     if (existingUser.email === email) {
-      throw new Error('Email đã được sử dụng');
+      throw new Error("Email đã được sử dụng");
     }
     if (existingUser.username === username) {
-      throw new Error('Tên người dùng đã được sử dụng');
+      throw new Error("Tên người dùng đã được sử dụng");
     }
   }
 
@@ -232,11 +305,11 @@ export const register = async (credentials: RegisterCredentials): Promise<Regist
     id: Date.now().toString(),
     username,
     email,
-    role: 'user' as const,
+    role: "user" as const,
     password,
-    fullName: '',
-    phone: '',
-    address: '',
+    fullName: "",
+    phone: "",
+    address: "",
     createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString(),
   };
@@ -262,16 +335,9 @@ export const register = async (credentials: RegisterCredentials): Promise<Regist
   };
 };
 
-export interface UpdateUserProfileData {
-  fullName?: string;
-  phone?: string;
-  address?: string;
-  email?: string;
-}
-
 export const updateUserProfile = async (
   userId: string,
-  updates: UpdateUserProfileData
+  updates: UpdateUserProfileData,
 ): Promise<User> => {
   await delay(500);
 
@@ -279,15 +345,17 @@ export const updateUserProfile = async (
   const userIndex = storedUsers.findIndex((u) => u.id === userId);
 
   if (userIndex === -1) {
-    throw new Error('Người dùng không tồn tại');
+    throw new Error("Người dùng không tồn tại");
   }
 
   const currentUser = storedUsers[userIndex];
 
   if (updates.email && updates.email !== currentUser.email) {
-    const emailExists = storedUsers.find((u) => u.email === updates.email && u.id !== userId);
+    const emailExists = storedUsers.find(
+      (u) => u.email === updates.email && u.id !== userId,
+    );
     if (emailExists) {
-      throw new Error('Email đã được sử dụng');
+      throw new Error("Email đã được sử dụng");
     }
   }
 

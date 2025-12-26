@@ -3,3 +3,65 @@
 :root {
   font-family: 'Montserrat', 'Noto Serif JP', system-ui, sans-serif;
 }
+
+/* Light theme */
+.light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-tertiary: #e5e7eb;
+  --text-primary: #000000;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --border-color: #d1d5db;
+}
+
+/* Dark theme */
+.dark {
+  --bg-primary: #000000;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #e5e7eb;
+  --text-tertiary: #9ca3af;
+  --border-color: #374151;
+}
+
+/* Apply theme to body */
+body.light-theme {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body.dark-theme {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Theme-aware utility classes */
+.theme-bg-primary {
+  background-color: var(--bg-primary);
+}
+
+.theme-bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.theme-bg-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.theme-text-primary {
+  color: var(--text-primary);
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+
+.theme-text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.theme-border {
+  border-color: var(--border-color);
+}

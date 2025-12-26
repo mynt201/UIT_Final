@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { IoMdClose } from 'react-icons/io';
 import { getCurrentUser, type User } from '../../Login/authService';
+import { Modal, Button } from '../../../components';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getThemeClasses } from '../../../utils/themeUtils';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -9,6 +11,8 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   const [user, setUser] = useState<User | null>(null);
+  const { theme } = useTheme();
+  const themeClasses = getThemeClasses(theme);
 
   useEffect(() => {
     if (isOpen) {
@@ -16,62 +20,53 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     }
   }, [isOpen]);
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
 
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-10000'>
-      <div className='bg-[#0a1628] rounded-xl shadow-2xl max-w-md w-full'>
-        <div className='flex justify-between items-center p-6 border-b border-gray-700'>
-          <h2 className='text-2xl font-bold text-white'>Thông tin cá nhân</h2>
-          <button
-            onClick={onClose}
-            className='p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors'
-          >
-            <IoMdClose size={24} className='text-white' />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Thông tin cá nhân"
+      maxWidth="md"
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Đóng
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className={`block text-sm mb-1 ${themeClasses.textSecondary}`}>ID</label>
+          <div className={themeClasses.text}>{user.id}</div>
         </div>
 
-        <div className='p-6 space-y-4'>
-          <div>
-            <label className='block text-gray-400 text-sm mb-1'>ID</label>
-            <div className='text-white'>{user.id}</div>
-          </div>
-
-          <div>
-            <label className='block text-gray-400 text-sm mb-1'>Tên người dùng</label>
-            <div className='text-white'>{user.username}</div>
-          </div>
-
-          <div>
-            <label className='block text-gray-400 text-sm mb-1'>Email</label>
-            <div className='text-white'>{user.email}</div>
-          </div>
-
-          <div>
-            <label className='block text-gray-400 text-sm mb-1'>Vai trò</label>
-            <div className='text-white'>
-              <span
-                className={`px-3 py-1 rounded-full text-sm ${
-                  user.role === 'admin'
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'bg-green-500/20 text-green-400'
-                }`}
-              >
-                {user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
-              </span>
-            </div>
-          </div>
+        <div>
+          <label className={`block text-sm mb-1 ${themeClasses.textSecondary}`}>Tên người dùng</label>
+          <div className={themeClasses.text}>{user.username}</div>
         </div>
 
-        <div className='p-6 border-t border-gray-700 flex justify-end'>
-          <button
-            onClick={onClose}
-            className='px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors'
-          >
-            Đóng
-          </button>
+        <div>
+          <label className={`block text-sm mb-1 ${themeClasses.textSecondary}`}>Email</label>
+          <div className={themeClasses.text}>{user.email}</div>
+        </div>
+
+        <div>
+          <label className={`block text-sm mb-1 ${themeClasses.textSecondary}`}>Vai trò</label>
+          <div>
+            <span
+              className={`px-3 py-1 rounded-full text-sm ${
+                user.role === "admin"
+                  ? theme === "light" 
+                    ? "bg-indigo-500/20 text-indigo-600"
+                    : "bg-indigo-500/20 text-indigo-400"
+                  : "bg-green-500/20 text-green-400"
+              }`}
+            >
+              {user.role === "admin" ? "Quản trị viên" : "Người dùng"}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

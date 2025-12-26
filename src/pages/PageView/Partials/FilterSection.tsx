@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
-import FormSelect from '../../../components/form/FormSelect';
-import CheckboxGroup from '../../../components/form/FormCheckbox';
+import { FormSelect, FormCheckbox } from '../../../components';
 import { options } from '../constants';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getThemeClasses } from '../../../utils/themeUtils';
+import { Button } from '../../../components';
 
 interface FilterSectionProps {
   selectedWard: string;
@@ -53,38 +55,42 @@ export default function FilterSection({
     }
   };
 
+  const { theme } = useTheme();
+  const themeClasses = getThemeClasses(theme);
+
   return (
-    <div className='bg-gray-100 p-4'>
-      <div className='flex justify-between items-center mb-4'>
-        <div className='text-lg font-semibold text-gray-800'>Bộ lọc</div>
-        <div className='flex items-center gap-4'>
-          <div className='text-sm text-gray-600'>
-            Hiển thị: <span className='font-bold text-blue-600'>{filteredCount}</span> khu vực
+    <div className={`${themeClasses.backgroundTertiary} p-2 md:p-3 shrink-0 border-b ${themeClasses.border}`}>
+      <div className='flex flex-row justify-between items-center gap-4 mb-2'>
+        <div className={`text-sm md:text-base font-semibold ${themeClasses.text} whitespace-nowrap`}>Bộ lọc</div>
+        <div className='flex items-center gap-3 md:gap-4 flex-shrink-0'>
+          <div className={`text-xs md:text-sm ${themeClasses.textSecondary} whitespace-nowrap`}>
+            Hiển thị: <span className={`font-bold ${theme === 'light' ? 'text-indigo-600' : 'text-indigo-400'}`}>{filteredCount}</span> khu vực
           </div>
-          <button
+          <Button
+            variant="secondary"
             onClick={onResetFilters}
-            className='px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm font-medium transition-colors'
+            className='px-3 py-1.5 text-xs whitespace-nowrap'
           >
-            Đặt lại bộ lọc
-          </button>
+            Đặt lại
+          </Button>
         </div>
       </div>
-      <div className='flex gap-10 flex-wrap'>
-        <div>
-          <div className='text-black py-4 font-medium'>Lọc theo khu vực</div>
-          <div className='w-64'>
+      <div className='flex flex-row gap-4 md:gap-6 items-end flex-wrap'>
+        <div className='flex-shrink-0'>
+          <div className={`${themeClasses.text} text-xs font-medium mb-1`}>Lọc theo khu vực</div>
+          <div className='w-40 md:w-48'>
             <FormSelect
-              label='Chọn khu vực'
+              label=''
               onChange={onWardChange}
               options={[{ label: 'Tất cả', value: '' }, ...wardOptions]}
               value={selectedWard}
             />
           </div>
         </div>
-        <div>
-          <div className='text-black py-4 font-medium'>Lọc theo mức độ</div>
-          <div style={{ width: 300 }}>
-            <CheckboxGroup
+        <div className='flex-shrink-0'>
+          <div className={`${themeClasses.text} text-xs font-medium mb-1`}>Lọc theo mức độ</div>
+          <div className='w-auto'>
+            <FormCheckbox
               options={options.map((opt) => ({
                 ...opt,
                 checked: selectedRiskLevels.includes(opt.value),
@@ -92,17 +98,17 @@ export default function FilterSection({
                   onRiskLevelChange(opt.value);
                 },
               }))}
-              className='flex'
+              className='flex row gap-2 md:gap-3'
             />
           </div>
         </div>
-        <div>
-          <div className='text-black py-4 font-medium'>
+        <div className='flex-shrink-0 flex-1 min-w-[180px] md:min-w-[220px]'>
+          <div className={`${themeClasses.text} text-xs font-medium mb-1`}>
             Chỉ số rủi ro: {minRisk.toFixed(1)} - {maxRisk.toFixed(1)}
           </div>
-          <div className='w-64 space-y-2'>
-            <div>
-              <label className='text-sm text-gray-600 block mb-1'>Tối thiểu</label>
+          <div className='flex gap-2 md:gap-3'>
+            <div className='flex-1'>
+              <label className={`text-xs ${themeClasses.textSecondary} block mb-0.5`}>Min</label>
               <input
                 type='range'
                 min='0'
@@ -110,12 +116,12 @@ export default function FilterSection({
                 step='0.1'
                 value={minRisk}
                 onChange={handleMinRiskChange}
-                className='w-full'
+                className={`w-full ${theme === 'light' ? 'accent-indigo-600' : 'accent-indigo-400'}`}
               />
-              <div className='text-xs text-gray-500 mt-1'>{minRisk.toFixed(1)}</div>
+              <div className={`text-xs ${themeClasses.textSecondary} mt-0.5`}>{minRisk.toFixed(1)}</div>
             </div>
-            <div>
-              <label className='text-sm text-gray-600 block mb-1'>Tối đa</label>
+            <div className='flex-1'>
+              <label className={`text-xs ${themeClasses.textSecondary} block mb-0.5`}>Max</label>
               <input
                 type='range'
                 min='0'
@@ -123,9 +129,9 @@ export default function FilterSection({
                 step='0.1'
                 value={maxRisk}
                 onChange={handleMaxRiskChange}
-                className='w-full'
+                className={`w-full ${theme === 'light' ? 'accent-indigo-600' : 'accent-indigo-400'}`}
               />
-              <div className='text-xs text-gray-500 mt-1'>{maxRisk.toFixed(1)}</div>
+              <div className={`text-xs ${themeClasses.textSecondary} mt-0.5`}>{maxRisk.toFixed(1)}</div>
             </div>
           </div>
         </div>

@@ -1,78 +1,135 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import logo from '../../../assets/logo.jpg';
-import { IoIosMap, IoIosPerson } from 'react-icons/io';
-import { IoMdLogOut } from 'react-icons/io';
-import { getCurrentUser, logout } from '../../Login/authService';
-import type { User } from '../../Login/authService';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../../../assets/logo.jpg";
+import { IoIosPerson } from "react-icons/io";
+import { IoMdLogOut, IoMdLogIn } from "react-icons/io";
+import { getCurrentUser, logout } from "../../Login/authService";
+import type { User } from "../../../types";
+import { LOGIN_PATH } from "../../../router/routePath";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { getThemeClasses } from "../../../utils/themeUtils";
 
-interface PageHeaderProps {
-  onSearch?: (searchTerm: string) => void;
-}
-
-export default function PageHeader({ onSearch }: PageHeaderProps) {
+export default function PageHeader() {
   const navigate = useNavigate();
-  const [user] = useState<User | null>(() => getCurrentUser());
-  const [searchTerm, setSearchTerm] = useState('');
+  const [user, setUser] = useState<User | null>(() => getCurrentUser());
+
+  useEffect(() => {
+    // Kiểm tra user mỗi khi component mount hoặc khi có thay đổi
+    const checkUser = () => {
+      setUser(getCurrentUser());
+    };
+
+    checkUser();
+
+    // Kiểm tra định kỳ để cập nhật khi user đăng nhập/đăng xuất ở tab khác
+    const interval = setInterval(checkUser, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    setUser(null);
+    navigate(LOGIN_PATH);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (onSearch) {
-      onSearch(value);
-    }
+  const handleLogin = () => {
+    navigate(LOGIN_PATH);
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onSearch) {
-      onSearch(searchTerm);
-    }
-  };
-
-  const displayName = user?.username || user?.email || 'Khách';
+  const { theme } = useTheme();
+  const themeClasses = getThemeClasses(theme);
+  const displayName = user?.username || user?.email || "Khách";
+  const isLoggedIn = !!user;
 
   return (
-    <header className='flex w-full bg-black border-b-2 border-b-gray-700 h-20'>
-      <div className='w-[20%] flex justify-center items-center gap-9'>
-        <div className='text-white text-4xl'>Bản đồ</div>
-        <img src={logo} className='w-12.5 h-12.5 rounded-2xl' alt='Logo' />
-      </div>
-      <div className='w-[50%] h-full flex items-center'>
-        <form onSubmit={handleSearchSubmit} className='w-full'>
-          <div className='w-full flex bg-neutral-500 rounded-2xl'>
-            <div className='w-12.5 flex justify-center items-center'>
-              <IoIosMap color='white' size={25} />
-            </div>
-            <input
-              type='text'
-              placeholder='Tìm kiếm....'
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className='w-[calc(100%-20px)] bg-neutral-500 h-10 rounded-2xl outline-0 text-white placeholder-gray-400'
-            />
-          </div>
-        </form>
-      </div>
-      <div className='w-[30%] h-full flex justify-center items-center'>
-        <div className='flex gap-5'>
-          <div className='flex items-end gap-2'>
-            <IoIosPerson size={25} color='white' />
-            <div className='text-white flex items-end'>Xin chào, {displayName}</div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className='flex items-end gap-2 hover:opacity-70 transition-opacity cursor-pointer'
+    <header
+      className={`flex w-full border-b ${themeClasses.border} h-16 md:h-20 shrink-0 ${themeClasses.headerBg}`}
+    >
+      {/* Logo và Tên hệ thống */}
+      <div className="flex items-center gap-3 md:gap-4 px-4 md:px-6 min-w-0">
+        <img
+          src={logo}
+          className="w-10 h-10 md:w-12 md:h-12 rounded-lg shrink-0"
+          alt="Logo"
+        />
+        <div className="flex flex-col min-w-0">
+          <h1
+            className={`${themeClasses.text} text-base md:text-lg lg:text-xl font-bold truncate`}
           >
-            <IoMdLogOut color='white' size={25} />
-            <div className='text-white'>Đăng xuất</div>
-          </button>
+            Hệ thống Đánh giá Rủi ro Ngập lụt
+          </h1>
+          <p
+            className={`${themeClasses.textSecondary} text-xs md:text-sm truncate`}
+          >
+            TP. Hồ Chí Minh
+          </p>
         </div>
+      </div>
+
+      {/* User Info và Actions */}
+      <div className="flex-1 flex items-center justify-end gap-3 md:gap-4 px-4 md:px-6">
+        {isLoggedIn ? (
+          <>
+            <div
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                theme === "light" ? "bg-gray-100" : "bg-gray-800/50"
+              }`}
+            >
+              <IoIosPerson
+                size={18}
+                className="shrink-0"
+                color={theme === "light" ? "#374151" : "#d1d5db"}
+              />
+              <div
+                className={`${themeClasses.text} text-sm font-medium truncate max-w-[150px]`}
+                title={displayName}
+              >
+                {displayName}
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg transition-colors ${
+                theme === "light"
+                  ? "hover:bg-gray-100 text-gray-700"
+                  : "hover:bg-gray-800/50 text-gray-300"
+              }`}
+              title="Đăng xuất"
+            >
+              <IoMdLogOut size={20} className="shrink-0" />
+              <span className={`${themeClasses.text} text-sm hidden md:inline`}>
+                Đăng xuất
+              </span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div
+              className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                theme === "light" ? "bg-gray-100" : "bg-gray-800/50"
+              }`}
+            >
+              <IoIosPerson
+                size={18}
+                className="shrink-0"
+                color={theme === "light" ? "#374151" : "#d1d5db"}
+              />
+              <div className={`${themeClasses.text} text-sm`}>Xin chào</div>
+            </div>
+            <button
+              onClick={handleLogin}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg transition-colors ${
+                theme === "light"
+                  ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                  : "bg-indigo-500 hover:bg-indigo-600 text-white"
+              }`}
+            >
+              <IoMdLogIn size={20} className="shrink-0" />
+              <span className="text-sm hidden md:inline">Đăng nhập</span>
+            </button>
+          </>
+        )}
       </div>
     </header>
   );

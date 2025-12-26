@@ -5,7 +5,7 @@ import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
 
-import { mockWards } from './mockData';
+import { mockWards } from '../../../mockData';
 import {
   calcFloodRiskIndex,
   getRiskLevel,

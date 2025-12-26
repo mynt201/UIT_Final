@@ -22,3 +22,4 @@ const RoleGuard = ({ allowRoles, children }: Props) => {
 };
 
 export default RoleGuard;
+
