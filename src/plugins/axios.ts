@@ -17,10 +17,10 @@ const axiosCreateConfig = {
 const axiosRequestInterceptor = () => {
   const onFulfilled = (config: AxiosRequestConfig) => {
     try {
-      //   if (commonStore.getToken() && config.headers) {
-      //     config.headers.Authorization = `Bearer ${commonStore.token}`;
-      //     config.headers.set('Accept-Language', 'ja-JP');
-      //   }
+      const token = localStorage.getItem('authToken');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     } catch (ex) {
       console.log(ex);
     }
@@ -41,6 +41,16 @@ const axiosResponseInterceptor = () => {
   };
 
   const onRejected = async (error: AxiosError): Promise<never> => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, clear auth data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   };
 
@@ -59,7 +69,10 @@ instance.interceptors.response.use(
   axiosResponseInterceptor().onRejected
 );
 
+export const api = instance;
+
 export default {
+  api,
   instance,
   axiosCreateConfig,
   axiosRequestInterceptor,

@@ -1,47 +1,42 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import * as yup from "yup";
-import { login } from "./authService";
-import { Input } from "../../components";
-import { Button } from "../../components";
-import { REGISTER_PATH, ADMIN_PATH, HOME_PATH } from "../../router/routePath";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import * as yup from 'yup';
+import { useAuth } from '../../contexts/AuthContext';
+import { Input } from '../../components';
+import { Button } from '../../components';
+import { REGISTER_PATH, ADMIN_PATH, HOME_PATH } from '../../router/routePath';
 
 const loginSchema = yup.object().shape({
-  username: yup
-    .string()
-    .required("Email là bắt buộc")
-    .email("Email không hợp lệ"),
+  username: yup.string().required('Email là bắt buộc').email('Email không hợp lệ'),
   password: yup
     .string()
-    .required("Mật khẩu là bắt buộc")
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    .required('Mật khẩu là bắt buộc')
+    .min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
 });
 
-import type { FormErrors } from "../../types";
+import type { FormErrors } from '../../types';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: authLogin, isLoading } = useAuth();
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    setSubmitError("");
+    setSubmitError('');
 
     try {
       await loginSchema.validate({ username, password }, { abortEarly: false });
 
-      const result = await login({ username, password });
+      await authLogin({ username, password });
 
-      if (result.user.role === "admin") {
-        navigate(ADMIN_PATH);
-      } else {
-        navigate(HOME_PATH);
-      }
+      // Navigation will be handled by AuthContext based on user role
+      navigate(HOME_PATH);
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         const validationErrors: FormErrors = {};
@@ -52,13 +47,13 @@ const Login = () => {
         });
         setErrors(validationErrors);
       } else {
-        setSubmitError("Sai tài khoản hoặc mật khẩu");
+        setSubmitError('Sai tài khoản hoặc mật khẩu');
       }
     }
   };
 
-  const handleFieldChange = (field: "username" | "password", value: string) => {
-    if (field === "username") {
+  const handleFieldChange = (field: 'username' | 'password', value: string) => {
+    if (field === 'username') {
       setUsername(value);
     } else {
       setPassword(value);
@@ -70,50 +65,48 @@ const Login = () => {
   };
 
   return (
-    <div className="container px-4 mx-auto min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-lg w-full bg-white p-8 rounded-lg shadow-lg">
-        <div className="text-center mb-6">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800">
-            Đăng nhập
-          </h2>
+    <div className='container px-4 mx-auto min-h-screen flex items-center justify-center '>
+      <div className='max-w-lg w-full bg-white p-8 rounded-lg shadow-lg'>
+        <div className='text-center mb-6'>
+          <h2 className='text-3xl md:text-4xl font-extrabold text-gray-800'>Đăng nhập</h2>
         </div>
 
         {submitError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className='mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded'>
             {submitError}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-6">
+          <div className='mb-6'>
             <Input
-              label="Email"
-              type="email"
-              placeholder="Email"
+              label='Email'
+              type='email'
+              placeholder='Email'
               value={username}
-              onChange={(e) => handleFieldChange("username", e.target.value)}
+              onChange={(e) => handleFieldChange('username', e.target.value)}
               error={errors.username}
             />
           </div>
 
-          <div className="mb-6">
+          <div className='mb-6'>
             <Input
-              label="Mật khẩu"
-              type="password"
-              placeholder="**********"
+              label='Mật khẩu'
+              type='password'
+              placeholder='**********'
               value={password}
-              onChange={(e) => handleFieldChange("password", e.target.value)}
+              onChange={(e) => handleFieldChange('password', e.target.value)}
               error={errors.password}
             />
           </div>
 
-          <Button type="submit" className="w-full">
-            Đăng nhập
+          <Button type='submit' className='w-full' disabled={isLoading}>
+            {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
 
-          <p className="text-center font-extrabold mt-4 text-gray-600">
-            Bạn chưa có tài khoản?{" "}
-            <Link className="text-red-500 hover:underline" to={REGISTER_PATH}>
+          <p className='text-center font-extrabold mt-4 text-gray-600'>
+            Bạn chưa có tài khoản?{' '}
+            <Link className='text-red-500 hover:underline' to={REGISTER_PATH}>
               Đăng ký
             </Link>
           </p>

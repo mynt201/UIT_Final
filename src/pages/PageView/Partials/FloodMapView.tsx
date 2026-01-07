@@ -3,9 +3,12 @@ import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import Graphic from '@arcgis/core/Graphic';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import TileLayer from '@arcgis/core/layers/TileLayer';
 import Polygon from '@arcgis/core/geometry/Polygon';
 
-import { mockWards } from '../../../mockData';
+import { wardService } from '../../../services/wardService';
+import type { WardData } from '../../../types/ward';
 import {
   calcFloodRiskIndex,
   getRiskLevel,
@@ -23,7 +26,7 @@ interface FloodMapViewProps {
   onFilteredCountChange?: (count: number) => void;
 }
 
-export default function FloodMapMock({
+export default function FloodMapView({
   selectedWard = '',
   selectedRiskLevels = ['cao', 'trungBinh', 'thap'],
   riskIndexRange = [0, 10],
@@ -31,6 +34,8 @@ export default function FloodMapMock({
 }: FloodMapViewProps) {
   const mapDiv = useRef<HTMLDivElement>(null);
   const wardLayerRef = useRef<GraphicsLayer | null>(null);
+  const roadsLayerRef = useRef<TileLayer | null>(null);
+  const buildingsLayerRef = useRef<FeatureLayer | null>(null);
   const viewRef = useRef<MapView | null>(null);
   const initialCenter = useRef<[number, number]>([106.7, 10.78]);
 
@@ -48,6 +53,11 @@ export default function FloodMapMock({
   };
 
   const initialZoom = useRef<number>(getInitialZoom());
+  const [wards, setWards] = useState<WardData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showRoads, setShowRoads] = useState(false);
+  const [showBuildings, setShowBuildings] = useState(false);
   const [selectedWardDetail, setSelectedWardDetail] = useState<{
     ward_name: string;
     flood_risk: number;
@@ -62,8 +72,48 @@ export default function FloodMapMock({
     resilience: number;
   } | null>(null);
 
+  // Fetch ward data from backend
   useEffect(() => {
-    if (!mapDiv.current) return;
+    const fetchWards = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await wardService.getWards({ limit: 1000 }); // Get all wards
+        setWards(response.wards);
+      } catch (err) {
+        console.error('Failed to fetch ward data:', err);
+        setError('Không thể tải dữ liệu phường/xã. Sử dụng dữ liệu mẫu.');
+        // Fallback to mock data if backend is not available
+        try {
+          const { mockWards } = await import('../../../mockData');
+          setWards(mockWards);
+        } catch (mockErr) {
+          console.error('Failed to load mock data:', mockErr);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWards();
+  }, []);
+
+  // Handle roads layer visibility
+  useEffect(() => {
+    if (roadsLayerRef.current) {
+      roadsLayerRef.current.visible = showRoads;
+    }
+  }, [showRoads]);
+
+  // Handle buildings layer visibility
+  useEffect(() => {
+    if (buildingsLayerRef.current) {
+      buildingsLayerRef.current.visible = showBuildings;
+    }
+  }, [showBuildings]);
+
+  useEffect(() => {
+    if (!mapDiv.current || isLoading) return;
 
     const getMapSettings = () => {
       try {
@@ -85,7 +135,29 @@ export default function FloodMapMock({
     };
 
     const mapSettings = getMapSettings();
-    const map = new Map({ basemap: 'dark-gray-vector' });
+
+    // Create additional layers for better map visualization
+    const roadsLayer = new TileLayer({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer',
+      title: 'Đường giao thông',
+      visible: showRoads,
+    });
+
+    const buildingsLayer = new FeatureLayer({
+      url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Administrative_Divisions/FeatureServer/0',
+      title: 'Khu vực hành chính',
+      visible: showBuildings,
+      opacity: 0.3,
+    });
+
+    roadsLayerRef.current = roadsLayer;
+    buildingsLayerRef.current = buildingsLayer;
+
+    const map = new Map({
+      basemap: 'dark-gray-vector',
+      layers: [roadsLayer, buildingsLayer],
+    });
+
     const view = new MapView({
       container: mapDiv.current,
       map,
@@ -96,7 +168,10 @@ export default function FloodMapMock({
 
     viewRef.current = view;
 
-    const wardLayer = new GraphicsLayer({ title: 'Bản đồ rủi ro ngập lụt' });
+    const wardLayer = new GraphicsLayer({
+      title: 'Bản đồ rủi ro ngập lụt',
+      opacity: 0.8,
+    });
     wardLayerRef.current = wardLayer;
 
     map.add(wardLayer);
@@ -104,7 +179,7 @@ export default function FloodMapMock({
     return () => {
       view.destroy();
     };
-  }, []);
+  }, [isLoading]);
 
   useEffect(() => {
     if (!viewRef.current) return;
@@ -133,7 +208,7 @@ export default function FloodMapMock({
                   graphic.attributes.ward_name
                 ) {
                   const attributes = graphic.attributes;
-                  const ward = mockWards.find((w) => w.ward_name === attributes.ward_name);
+                  const ward = wards.find((w) => w.ward_name === attributes.ward_name);
 
                   if (ward) {
                     if (view.popup) {
@@ -188,11 +263,11 @@ export default function FloodMapMock({
   }, []);
 
   useEffect(() => {
-    if (!wardLayerRef.current) return;
+    if (!wardLayerRef.current || wards.length === 0) return;
 
     wardLayerRef.current.removeAll();
 
-    const filteredWards = mockWards.filter((ward) => {
+    const filteredWards = wards.filter((ward) => {
       const exposure = ward.population_density / 1000 + ward.rainfall / 200;
       const susceptibility = ward.low_elevation + ward.urban_land;
       const resilience = ward.drainage_capacity || 1;
@@ -257,6 +332,28 @@ export default function FloodMapMock({
     });
   }, [selectedWard, selectedRiskLevels, riskIndexRange, onFilteredCountChange]);
 
+  if (isLoading) {
+    return (
+      <div className='relative w-full flex items-center justify-center' style={{ height: '495px' }}>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4'></div>
+          <p className='text-gray-600'>Đang tải bản đồ...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='relative w-full flex items-center justify-center' style={{ height: '495px' }}>
+        <div className='text-center'>
+          <div className='text-red-500 mb-4'>⚠️ {error}</div>
+          <p className='text-gray-600'>Vui lòng thử lại sau.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='relative w-full' style={{ height: '495px' }}>
       <div
@@ -264,6 +361,32 @@ export default function FloodMapMock({
         className='absolute inset-0 w-full h-full'
         style={{ pointerEvents: 'auto' }}
       />
+
+      {/* Layer Controls */}
+      <div className='absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg'>
+        <h4 className='text-sm font-semibold mb-2 text-gray-800'>Lớp bản đồ</h4>
+        <div className='space-y-2'>
+          <label className='flex items-center text-sm'>
+            <input
+              type='checkbox'
+              checked={showRoads}
+              onChange={(e) => setShowRoads(e.target.checked)}
+              className='mr-2'
+            />
+            Đường giao thông
+          </label>
+          <label className='flex items-center text-sm'>
+            <input
+              type='checkbox'
+              checked={showBuildings}
+              onChange={(e) => setShowBuildings(e.target.checked)}
+              className='mr-2'
+            />
+            Khu vực hành chính
+          </label>
+        </div>
+      </div>
+
       <FloodMapLegend />
       {selectedWardDetail && (
         <WardDetailPanel

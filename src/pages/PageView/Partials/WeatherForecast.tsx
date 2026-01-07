@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { FaCloudRain, FaExclamationTriangle, FaCloud } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
+import { weatherService } from "../../../services/weatherService";
+import type { WeatherData } from "../../../types/dataManagement";
 
 interface WeatherForecastData {
   date: string;
@@ -15,11 +17,92 @@ interface WeatherForecastData {
 export default function WeatherForecast() {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Generate mock weather forecast for next 7 days
+  useEffect(() => {
+    const fetchWeatherData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Get latest weather data for all wards (forecast data)
+        const response = await weatherService.getWeatherData({
+          is_forecast: true,
+          limit: 100,
+          sort: 'date',
+          order: 'desc'
+        });
+
+        setWeatherData(response.weatherData);
+      } catch (err) {
+        console.error('Failed to fetch weather data:', err);
+        setError('Không thể tải dữ liệu thời tiết.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWeatherData();
+  }, []);
+
+  // Process weather data into forecast format
   const forecastData = useMemo<WeatherForecastData[]>(() => {
-    const data: WeatherForecastData[] = [];
-    const today = new Date();
+    if (weatherData.length === 0) {
+      // Fallback to mock data if no real data available
+      const data: WeatherForecastData[] = [];
+      const today = new Date();
+      const dayNames = [
+        "Chủ nhật",
+        "Thứ 2",
+        "Thứ 3",
+        "Thứ 4",
+        "Thứ 5",
+        "Thứ 6",
+        "Thứ 7",
+      ];
+
+      // Simple seeded random function
+      const seededRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const seed = date.getTime();
+
+        const rainfall = Math.round(seededRandom(seed) * 200);
+        const isHeavyRain = rainfall >= 100;
+        const temperature = Math.round(25 + seededRandom(seed + 1) * 8);
+        const humidity = Math.round(60 + seededRandom(seed + 2) * 30);
+
+        data.push({
+          date: date.toISOString().split("T")[0],
+          dayName: i === 0 ? "Hôm nay" : dayNames[date.getDay()],
+          rainfall,
+          temperature,
+          humidity,
+          isHeavyRain,
+        });
+      }
+
+      return data;
+    }
+
+    // Group weather data by date and calculate averages
+    const groupedByDate = weatherData.reduce((acc, item) => {
+      const dateKey = item.date.split('T')[0];
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(item);
+      return acc;
+    }, {} as Record<string, WeatherData[]>);
+
+    // Convert to forecast format
     const dayNames = [
       "Chủ nhật",
       "Thứ 2",
@@ -30,34 +113,28 @@ export default function WeatherForecast() {
       "Thứ 7",
     ];
 
-    // Simple seeded random function
-    const seededRandom = (seed: number) => {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    };
+    return Object.entries(groupedByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(0, 7) // Take only first 7 days
+      .map(([dateStr, dayData]) => {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const isToday = date.toDateString() === today.toDateString();
 
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const seed = date.getTime();
-      
-      const rainfall = Math.round(seededRandom(seed) * 200);
-      const isHeavyRain = rainfall >= 100; // Mưa lớn >= 100mm
-      const temperature = Math.round(25 + seededRandom(seed + 1) * 8);
-      const humidity = Math.round(60 + seededRandom(seed + 2) * 30);
+        const avgRainfall = dayData.reduce((sum, item) => sum + item.rainfall, 0) / dayData.length;
+        const avgTemperature = dayData.reduce((sum, item) => sum + item.temperature, 0) / dayData.length;
+        const avgHumidity = dayData.reduce((sum, item) => sum + item.humidity, 0) / dayData.length;
 
-      data.push({
-        date: date.toISOString().split("T")[0],
-        dayName: i === 0 ? "Hôm nay" : dayNames[date.getDay()],
-        rainfall,
-        temperature,
-        humidity,
-        isHeavyRain,
+        return {
+          date: dateStr,
+          dayName: isToday ? "Hôm nay" : dayNames[date.getDay()],
+          rainfall: Math.round(avgRainfall),
+          temperature: Math.round(avgTemperature),
+          humidity: Math.round(avgHumidity),
+          isHeavyRain: avgRainfall >= 100,
+        };
       });
-    }
-
-    return data;
-  }, []);
+  }, [weatherData]);
 
   const hasHeavyRain = forecastData.some((day) => day.isHeavyRain);
   const heavyRainDays = forecastData.filter((day) => day.isHeavyRain);
@@ -68,6 +145,35 @@ export default function WeatherForecast() {
     const month = date.getMonth() + 1;
     return `${day}/${month}`;
   };
+
+  if (isLoading) {
+    return (
+      <div
+        className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4 md:p-5`}
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2'></div>
+            <p className={`text-sm ${themeClasses.textSecondary}`}>Đang tải dự báo thời tiết...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4 md:p-5`}
+      >
+        <div className="text-center py-8">
+          <FaCloudRain className="mx-auto mb-2 text-gray-400" size={24} />
+          <p className={`text-sm ${themeClasses.textSecondary}`}>{error}</p>
+          <p className={`text-xs mt-1 ${themeClasses.textSecondary}`}>Hiển thị dữ liệu mẫu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
