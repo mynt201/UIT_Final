@@ -1,4 +1,3 @@
-import { IoMdClose } from 'react-icons/io';
 import { mockWards } from '../../../mockData';
 import {
   calcFloodRiskIndex,
@@ -72,7 +71,7 @@ export default function RiskReportModal({ isOpen, onClose }: RiskReportModalProp
             {
               header: "Chỉ số rủi ro",
               accessor: "flood_risk",
-              render: (value) => value.toFixed(2),
+              render: (value) => (value as number).toFixed(2),
             },
             {
               header: "Mức độ",
@@ -87,7 +86,7 @@ export default function RiskReportModal({ isOpen, onClose }: RiskReportModalProp
                       : "bg-green-300/20 text-green-300"
                   }`}
                 >
-                  {value}
+                  {value as string}
                 </span>
               ),
             },

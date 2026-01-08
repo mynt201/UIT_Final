@@ -6,15 +6,6 @@ import { Table, Input, Modal, Button } from "../../../components";
 
 import type { WeatherData } from "../../../types/dataManagement";
 
-interface WeatherDataProps {
-  id: string;
-  ward_id: string;
-  date: string;
-  rainfall: number;
-  water_level: number;
-  tidal_level: number;
-}
-
 const WeatherDataManagement = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -24,10 +15,16 @@ const WeatherDataManagement = () => {
   const [formData, setFormData] = useState<WeatherData>({
     id: "",
     ward_id: "",
-    date: "",
+    date: new Date().toISOString().split('T')[0],
+    temperature: {
+      current: 0,
+      min: 0,
+      max: 0,
+      feels_like: 0,
+    },
+    humidity: 0,
     rainfall: 0,
-    water_level: 0,
-    tidal_level: 0,
+    wind_speed: 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,10 +45,16 @@ const WeatherDataManagement = () => {
     setFormData({
       id: "",
       ward_id: "",
-      date: "",
+      date: new Date().toISOString().split('T')[0],
+      temperature: {
+        current: 0,
+        min: 0,
+        max: 0,
+        feels_like: 0,
+      },
+      humidity: 0,
       rainfall: 0,
-      water_level: 0,
-      tidal_level: 0,
+      wind_speed: 0,
     });
   };
 
@@ -103,8 +106,9 @@ const WeatherDataManagement = () => {
           { header: "ID Phường", accessor: "ward_id" },
           { header: "Ngày", accessor: "date" },
           { header: "Lượng mưa (mm)", accessor: "rainfall" },
-          { header: "Mực nước (m)", accessor: "water_level" },
-          { header: "Mực triều (m)", accessor: "tidal_level" },
+          { header: "Nhiệt độ (°C)", accessor: "temperature" },
+          { header: "Độ ẩm (%)", accessor: "humidity" },
+          { header: "Tốc độ gió (m/s)", accessor: "wind_speed" },
           {
             header: "Thao tác",
             accessor: "id",
@@ -202,28 +206,45 @@ const WeatherDataManagement = () => {
               }
             />
             <Input
-              label="Mực nước (m) *"
+              label="Nhiệt độ hiện tại (°C) *"
               type="number"
               required
-              step="0.01"
-              value={formData.water_level}
+              step="0.1"
+              value={formData.temperature.current}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  water_level: parseFloat(e.target.value),
+                  temperature: {
+                    ...formData.temperature,
+                    current: parseFloat(e.target.value),
+                  },
                 })
               }
             />
             <Input
-              label="Mực triều (m) *"
+              label="Độ ẩm (%) *"
               type="number"
               required
-              step="0.01"
-              value={formData.tidal_level}
+              min="0"
+              max="100"
+              value={formData.humidity}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  tidal_level: parseFloat(e.target.value),
+                  humidity: parseFloat(e.target.value),
+                })
+              }
+            />
+            <Input
+              label="Tốc độ gió (m/s) *"
+              type="number"
+              required
+              step="0.1"
+              value={formData.wind_speed}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  wind_speed: parseFloat(e.target.value),
                 })
               }
             />

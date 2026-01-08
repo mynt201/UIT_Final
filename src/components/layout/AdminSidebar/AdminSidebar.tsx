@@ -8,7 +8,7 @@ import {
   FaSignOutAlt,
   FaMapMarkedAlt,
 } from "react-icons/fa";
-import { getCurrentUser, logout } from "../../../pages/Login/authService";
+import { useAuth } from "../../../contexts/AuthContext";
 import logo from "../../../assets/logo.jpg";
 import {
   ADMIN_PATH,
@@ -26,7 +26,7 @@ import { getThemeClasses } from "../../../utils/themeUtils";
 export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = getCurrentUser();
+  const { user, logout } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -181,4 +181,5 @@ export default function AdminSidebar() {
     </aside>
   );
 }
+
 

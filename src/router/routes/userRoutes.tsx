@@ -10,7 +10,7 @@ export const userRoutes: RouteObject[] = [
   {
     path: HOME_PATH,
     element: (
-      <RoleGuard allowRoles={["user", "admin"]}>
+      <RoleGuard>
         <MainLayout />
       </RoleGuard>
     ),

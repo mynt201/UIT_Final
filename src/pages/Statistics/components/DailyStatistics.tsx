@@ -264,7 +264,7 @@ const DailyStatistics = ({
             {
               header: 'Ngày',
               accessor: 'day',
-              render: (value, row) =>
+              render: (_, row) =>
                 formatDate(new Date(selectedYear, selectedMonth - 1, row.day)),
             },
             {

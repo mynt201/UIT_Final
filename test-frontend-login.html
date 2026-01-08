@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend Login Flow</title>
+</head>
+<body>
+    <h1>Test Frontend Login Flow</h1>
+    <div id="results"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        async function testLoginFlow() {
+            try {
+                resultsDiv.innerHTML += '<p>🔐 Testing login...</p>';
+
+                // Step 1: Login
+                const loginResponse = await fetch('http://localhost:3000/api/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@floodrisk.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+
+                if (!loginResponse.ok) {
+                    throw new Error(`Login failed: ${JSON.stringify(loginData)}`);
+                }
+
+                resultsDiv.innerHTML += '<p>✅ Login successful</p>';
+
+                // Step 2: Store token
+                localStorage.setItem('authToken', loginData.token);
+                localStorage.setItem('userData', JSON.stringify(loginData.user));
+                resultsDiv.innerHTML += '<p>💾 Token saved to localStorage</p>';
+
+                // Step 3: Test authenticated API call
+                resultsDiv.innerHTML += '<p>📡 Testing authenticated API call...</p>';
+
+                const profileResponse = await fetch('http://localhost:3000/api/users/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${loginData.token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const profileData = await profileResponse.json();
+
+                if (!profileResponse.ok) {
+                    throw new Error(`Profile call failed: ${JSON.stringify(profileData)}`);
+                }
+
+                resultsDiv.innerHTML += '<p>✅ Authenticated API call successful</p>';
+                resultsDiv.innerHTML += '<p>🎉 All tests passed!</p>';
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error('Test failed:', error);
+            }
+        }
+
+        // Run test when page loads
+        testLoginFlow();
+    </script>
+</body>
+</html>

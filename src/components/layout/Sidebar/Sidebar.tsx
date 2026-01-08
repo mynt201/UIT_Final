@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import { IoIosListBox, IoIosPrint, IoIosPodium } from 'react-icons/io';
 import { IoMdPerson, IoMdSettings } from 'react-icons/io';
-import { getCurrentUser, logout } from '../../../pages/Login/authService';
+import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/logo.jpg';
 import {
   HOME_PATH,
@@ -30,7 +30,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isAdmin = false, onExportClick }: SidebarProps) {
   const location = useLocation();
-  const user = getCurrentUser();
+  const { user, logout } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 

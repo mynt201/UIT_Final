@@ -7,6 +7,7 @@ export interface WardQueryParams {
   district?: string;
   province?: string;
   risk_level?: string;
+  ward_name?: string;
   sort?: string;
   order?: 'asc' | 'desc';
 }

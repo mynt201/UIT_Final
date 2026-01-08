@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { FaCloudRain, FaExclamationTriangle, FaCloud } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
-import { weatherService } from "../../../services/weatherService";
+import { useWeather } from "../../../hooks/useWeather";
 import type { WeatherData } from "../../../types/dataManagement";
 
 interface WeatherForecastData {
@@ -12,89 +12,40 @@ interface WeatherForecastData {
   temperature: number;
   humidity: number;
   isHeavyRain: boolean;
+  isToday: boolean;
 }
 
 export default function WeatherForecast() {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
-  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchWeatherData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+  // Use React Query to fetch weather data
+  const {
+    data: weatherResponse,
+    isLoading,
+    error: weatherError,
+  } = useWeather({
+    limit: 100,
+    sort: "date",
+    order: "asc",
+  });
 
-        // Get latest weather data for all wards (forecast data)
-        const response = await weatherService.getWeatherData({
-          is_forecast: true,
-          limit: 100,
-          sort: 'date',
-          order: 'desc'
-        });
-
-        setWeatherData(response.weatherData);
-      } catch (err) {
-        console.error('Failed to fetch weather data:', err);
-        setError('Không thể tải dữ liệu thời tiết.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchWeatherData();
-  }, []);
+  const weatherData = useMemo(
+    () => weatherResponse?.weatherData || [],
+    [weatherResponse],
+  );
+  const error = weatherError?.message || null;
 
   // Process weather data into forecast format
   const forecastData = useMemo<WeatherForecastData[]>(() => {
     if (weatherData.length === 0) {
-      // Fallback to mock data if no real data available
-      const data: WeatherForecastData[] = [];
-      const today = new Date();
-      const dayNames = [
-        "Chủ nhật",
-        "Thứ 2",
-        "Thứ 3",
-        "Thứ 4",
-        "Thứ 5",
-        "Thứ 6",
-        "Thứ 7",
-      ];
-
-      // Simple seeded random function
-      const seededRandom = (seed: number) => {
-        const x = Math.sin(seed) * 10000;
-        return x - Math.floor(x);
-      };
-
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const seed = date.getTime();
-
-        const rainfall = Math.round(seededRandom(seed) * 200);
-        const isHeavyRain = rainfall >= 100;
-        const temperature = Math.round(25 + seededRandom(seed + 1) * 8);
-        const humidity = Math.round(60 + seededRandom(seed + 2) * 30);
-
-        data.push({
-          date: date.toISOString().split("T")[0],
-          dayName: i === 0 ? "Hôm nay" : dayNames[date.getDay()],
-          rainfall,
-          temperature,
-          humidity,
-          isHeavyRain,
-        });
-      }
-
-      return data;
+      // Return empty array if no real data available (no more mock data fallback)
+      return [];
     }
 
     // Group weather data by date and calculate averages
     const groupedByDate = weatherData.reduce((acc, item) => {
-      const dateKey = item.date.split('T')[0];
+      const dateKey = item.date.split("T")[0];
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
@@ -121,9 +72,15 @@ export default function WeatherForecast() {
         const today = new Date();
         const isToday = date.toDateString() === today.toDateString();
 
-        const avgRainfall = dayData.reduce((sum, item) => sum + item.rainfall, 0) / dayData.length;
-        const avgTemperature = dayData.reduce((sum, item) => sum + item.temperature, 0) / dayData.length;
-        const avgHumidity = dayData.reduce((sum, item) => sum + item.humidity, 0) / dayData.length;
+        const avgRainfall =
+          dayData.reduce((sum, item) => sum + item.rainfall, 0) /
+          dayData.length;
+        const avgTemperature =
+          dayData.reduce((sum, item) => sum + item.temperature.current, 0) /
+          dayData.length;
+        const avgHumidity =
+          dayData.reduce((sum, item) => sum + item.humidity, 0) /
+          dayData.length;
 
         return {
           date: dateStr,
@@ -132,18 +89,23 @@ export default function WeatherForecast() {
           temperature: Math.round(avgTemperature),
           humidity: Math.round(avgHumidity),
           isHeavyRain: avgRainfall >= 100,
+          isToday,
         };
       });
   }, [weatherData]);
 
   const hasHeavyRain = forecastData.some((day) => day.isHeavyRain);
   const heavyRainDays = forecastData.filter((day) => day.isHeavyRain);
+  const upcomingRainWarnings = forecastData.filter(
+    (day) => !day.isToday && day.isHeavyRain,
+  );
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const day = date.getDate();
     const month = date.getMonth() + 1;
-    return `${day}/${month}`;
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   if (isLoading) {
@@ -153,8 +115,10 @@ export default function WeatherForecast() {
       >
         <div className="flex items-center justify-center py-8">
           <div className="text-center">
-            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2'></div>
-            <p className={`text-sm ${themeClasses.textSecondary}`}>Đang tải dự báo thời tiết...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <p className={`text-sm ${themeClasses.textSecondary}`}>
+              Đang tải dự báo thời tiết...
+            </p>
           </div>
         </div>
       </div>
@@ -169,7 +133,25 @@ export default function WeatherForecast() {
         <div className="text-center py-8">
           <FaCloudRain className="mx-auto mb-2 text-gray-400" size={24} />
           <p className={`text-sm ${themeClasses.textSecondary}`}>{error}</p>
-          <p className={`text-xs mt-1 ${themeClasses.textSecondary}`}>Hiển thị dữ liệu mẫu</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message when no weather data is available (after loading completes)
+  if (!isLoading && forecastData.length === 0) {
+    return (
+      <div
+        className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4 md:p-5`}
+      >
+        <div className="text-center py-8">
+          <FaCloudRain className="mx-auto mb-2 text-gray-400" size={24} />
+          <p className={`text-sm ${themeClasses.textSecondary}`}>
+            Không có dữ liệu thời tiết
+          </p>
+          <p className={`text-xs mt-1 ${themeClasses.textSecondary}`}>
+            Dữ liệu sẽ được cập nhật khi có sẵn
+          </p>
         </div>
       </div>
     );
@@ -188,7 +170,9 @@ export default function WeatherForecast() {
             }
             size={20}
           />
-          <h3 className={`text-base md:text-lg font-semibold ${themeClasses.text}`}>
+          <h3
+            className={`text-base md:text-lg font-semibold ${themeClasses.text}`}
+          >
             Dự báo thời tiết 7 ngày tới
           </h3>
         </div>
@@ -228,7 +212,40 @@ export default function WeatherForecast() {
                 {heavyRainDays
                   .map(
                     (day) =>
-                      `${day.dayName} (${formatDate(day.date)}) - ${day.rainfall}mm`,
+                      `${day.dayName} (${formatDate(day.date)}) - ${
+                        day.rainfall
+                      }mm`,
+                  )
+                  .join(", ")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Rain Warnings */}
+      {upcomingRainWarnings.length > 0 && (
+        <div
+          className={`mb-4 p-3 rounded-lg border ${
+            theme === "light"
+              ? "bg-orange-50 border-orange-200 text-orange-800"
+              : "bg-orange-900/20 border-orange-700 text-orange-300"
+          }`}
+        >
+          <div className="flex items-start gap-2">
+            <FaExclamationTriangle className="mt-0.5 shrink-0" size={18} />
+            <div>
+              <p className="font-semibold text-sm mb-1">
+                ⚠️ Cảnh báo mưa lớn sắp tới
+              </p>
+              <p className="text-xs">
+                Dự báo có mưa lớn vào:{" "}
+                {upcomingRainWarnings
+                  .map(
+                    (day) =>
+                      `${day.dayName} (${formatDate(day.date)}) - ${
+                        day.rainfall
+                      }mm`,
                   )
                   .join(", ")}
               </p>
@@ -239,11 +256,13 @@ export default function WeatherForecast() {
 
       {/* Forecast Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
-        {forecastData.map((day, index) => (
+        {forecastData.map((day) => (
           <div
             key={day.date}
             className={`p-2 md:p-3 rounded-lg border ${
-              day.isHeavyRain
+              day.isToday
+                ? "border-red-500 bg-red-50/50"
+                : day.isHeavyRain
                 ? theme === "light"
                   ? "bg-red-50 border-red-300"
                   : "bg-red-900/20 border-red-700"
@@ -300,9 +319,7 @@ export default function WeatherForecast() {
               <div className={`text-sm font-bold ${themeClasses.text} mb-1`}>
                 {day.rainfall}mm
               </div>
-              <div
-                className={`text-xs ${themeClasses.textSecondary} mb-1`}
-              >
+              <div className={`text-xs ${themeClasses.textSecondary} mb-1`}>
                 {day.temperature}°C
               </div>
               <div className={`text-xs ${themeClasses.textSecondary}`}>
@@ -315,4 +332,3 @@ export default function WeatherForecast() {
     </div>
   );
 }
-

@@ -1,18 +1,9 @@
 import { useState } from "react";
-import { FaUpload, FaEdit, FaTrash, FaPlus, FaCalculator } from "react-icons/fa";
+import { FaUpload, FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
 import { Table, Input, Modal, Button } from "../../../components";
 import type { RiskIndexData } from "../../../types/dataManagement";
-
-interface RiskIndexDataProps {
-  id: string;
-  ward_id: string;
-  exposure: number;
-  susceptibility: number;
-  resilience: number;
-  score: number;
-}
 
 const RiskIndexManagement = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -23,10 +14,11 @@ const RiskIndexManagement = () => {
   const [formData, setFormData] = useState<RiskIndexData>({
     id: "",
     ward_id: "",
+    date: new Date().toISOString().split('T')[0],
+    risk_index: 0,
     exposure: 0,
     susceptibility: 0,
     resilience: 0,
-    score: 0,
   });
 
   const calculateScore = (exposure: number, susceptibility: number, resilience: number) => {
@@ -39,7 +31,7 @@ const RiskIndexManagement = () => {
     setFormData({
       ...formData,
       exposure: newExposure,
-      score: newScore,
+      risk_index: newScore,
     });
   };
 
@@ -49,7 +41,7 @@ const RiskIndexManagement = () => {
     setFormData({
       ...formData,
       susceptibility: newSusceptibility,
-      score: newScore,
+      risk_index: newScore,
     });
   };
 
@@ -59,7 +51,7 @@ const RiskIndexManagement = () => {
     setFormData({
       ...formData,
       resilience: newResilience,
-      score: newScore,
+      risk_index: newScore,
     });
   };
 
@@ -81,10 +73,11 @@ const RiskIndexManagement = () => {
     setFormData({
       id: "",
       ward_id: "",
+      date: new Date().toISOString().split('T')[0],
       exposure: 0,
       susceptibility: 0,
       resilience: 0,
-      score: 0,
+      risk_index: 0,
     });
   };
 
@@ -100,15 +93,15 @@ const RiskIndexManagement = () => {
     }
   };
 
-  const getRiskLevel = (score: number): string => {
-    if (score >= 3.5) return "Cao";
-    if (score >= 2.0) return "Trung Bình";
+  const getRiskLevel = (riskIndex: number): string => {
+    if (riskIndex >= 6) return "Cao";
+    if (riskIndex >= 4) return "Trung Bình";
     return "Thấp";
   };
 
-  const getRiskColor = (score: number): string => {
-    if (score >= 3.5) return "text-red-400";
-    if (score >= 2.0) return "text-orange-400";
+  const getRiskColor = (riskIndex: number): string => {
+    if (riskIndex >= 6) return "text-red-400";
+    if (riskIndex >= 4) return "text-orange-400";
     return "text-green-400";
   };
 
@@ -149,41 +142,41 @@ const RiskIndexManagement = () => {
           {
             header: "Exposure",
             accessor: "exposure",
-            render: (value) => value.toFixed(2),
+            render: (value) => (value as number).toFixed(2),
           },
           {
             header: "Susceptibility",
             accessor: "susceptibility",
-            render: (value) => value.toFixed(2),
+            render: (value) => (value as number).toFixed(2),
           },
           {
             header: "Resilience",
             accessor: "resilience",
-            render: (value) => value.toFixed(2),
+            render: (value) => (value as number).toFixed(2),
           },
           {
             header: "Chỉ số Rủi ro",
-            accessor: "score",
+            accessor: "risk_index",
             render: (value) => (
-              <span className={`font-bold ${getRiskColor(value)}`}>
-                {value.toFixed(2)}
+              <span className={`font-bold ${getRiskColor(value as number)}`}>
+                {(value as number).toFixed(2)}
               </span>
             ),
           },
           {
             header: "Mức độ",
-            accessor: "score",
+            accessor: "risk_index",
             render: (value) => (
               <span
                 className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  getRiskLevel(value) === "Cao"
+                  getRiskLevel(value as number) === "Cao"
                     ? "bg-red-500/20 text-red-400"
-                    : getRiskLevel(value) === "Trung Bình"
+                    : getRiskLevel(value as number) === "Trung Bình"
                     ? "bg-orange-300/20 text-orange-300"
                     : "bg-green-300/20 text-green-300"
                 }`}
               >
-                {getRiskLevel(value)}
+                {getRiskLevel(value as number)}
               </span>
             ),
           },
@@ -297,19 +290,19 @@ const RiskIndexManagement = () => {
             <div className="flex items-center justify-between">
               <span className={`${themeClasses.text} font-medium`}>Chỉ số Rủi ro (tự động tính):</span>
               <div className="flex items-center gap-3">
-                <span className={`text-2xl font-bold ${getRiskColor(formData.score)}`}>
-                  {formData.score.toFixed(2)}
+                <span className={`text-2xl font-bold ${getRiskColor(formData.risk_index)}`}>
+                  {formData.risk_index.toFixed(2)}
                 </span>
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    getRiskLevel(formData.score) === "Cao"
+                    getRiskLevel(formData.risk_index) === "Cao"
                       ? "bg-red-500/20 text-red-400"
-                      : getRiskLevel(formData.score) === "Trung Bình"
+                      : getRiskLevel(formData.risk_index) === "Trung Bình"
                       ? "bg-orange-300/20 text-orange-300"
                       : "bg-green-300/20 text-green-300"
                   }`}
                 >
-                  {getRiskLevel(formData.score)}
+                  {getRiskLevel(formData.risk_index)}
                 </span>
               </div>
             </div>

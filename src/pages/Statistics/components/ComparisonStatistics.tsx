@@ -296,7 +296,7 @@ const ComparisonStatistics = ({
             {
               header: 'Thay đổi',
               accessor: 'change',
-              render: (value, row) => {
+              render: (_, row) => {
                 if (
                   row.metric === 'Lượng mưa TB (mm)' ||
                   row.metric === 'Chỉ số rủi ro TB' ||

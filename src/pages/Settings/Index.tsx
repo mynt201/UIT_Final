@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
-import { IoMdCheckmark } from "react-icons/io";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
-import { Input, Select, Button } from "../../components";
+import { Select, Button } from "../../components";
 import type { Settings } from "../../types";
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
   language: "vi",
   notifications: true,
+  emailNotifications: true,
+  pushNotifications: true,
+  smsNotifications: false,
+  autoRefresh: false,
+  refreshInterval: 30000,
+  mapStyle: "default",
+  defaultView: "map",
   autoSave: false,
   mapDefaultZoom: 13,
   mapAnimation: true,

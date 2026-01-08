@@ -31,4 +31,7 @@ export interface WardDetail {
   exposure: number;
   susceptibility: number;
   resilience: number;
+  low_elevation: number;
+  drainage_capacity: number;
+  urban_land: number;
 }

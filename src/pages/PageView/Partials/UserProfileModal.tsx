@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { getCurrentUser, type User } from '../../Login/authService';
+import { useAuth } from '../../../contexts/AuthContext';
 import { Modal, Button } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
@@ -10,15 +9,9 @@ interface UserProfileModalProps {
 }
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
-
-  useEffect(() => {
-    if (isOpen) {
-      setUser(getCurrentUser());
-    }
-  }, [isOpen]);
 
   if (!user) return null;
 

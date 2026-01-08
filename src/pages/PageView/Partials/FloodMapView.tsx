@@ -1,23 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
-import Map from '@arcgis/core/Map';
-import MapView from '@arcgis/core/views/MapView';
-import Graphic from '@arcgis/core/Graphic';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
-import TileLayer from '@arcgis/core/layers/TileLayer';
-import Polygon from '@arcgis/core/geometry/Polygon';
+import { useEffect, useRef, useState } from "react";
+import Map from "@arcgis/core/Map";
+import MapView from "@arcgis/core/views/MapView";
+import Graphic from "@arcgis/core/Graphic";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import TileLayer from "@arcgis/core/layers/TileLayer";
+import Polygon from "@arcgis/core/geometry/Polygon";
 
-import { wardService } from '../../../services/wardService';
-import type { WardData } from '../../../types/ward';
+import { useWards } from "../../../hooks/useWards";
 import {
   calcFloodRiskIndex,
   getRiskLevel,
   getRiskColor,
   getRiskOutlineColor,
   getRiskLevelLabel,
-} from './floodRiskUtils';
-import FloodMapLegend from './FloodMapLegend';
-import WardDetailPanel from './WardDetailPanel';
+} from "./floodRiskUtils";
+import FloodMapLegend from "./FloodMapLegend";
+import WardDetailPanel from "./WardDetailPanel";
 
 interface FloodMapViewProps {
   selectedWard?: string;
@@ -27,8 +26,8 @@ interface FloodMapViewProps {
 }
 
 export default function FloodMapView({
-  selectedWard = '',
-  selectedRiskLevels = ['cao', 'trungBinh', 'thap'],
+  selectedWard = "",
+  selectedRiskLevels = ["cao", "trungBinh", "thap"],
   riskIndexRange = [0, 10],
   onFilteredCountChange,
 }: FloodMapViewProps) {
@@ -41,7 +40,7 @@ export default function FloodMapView({
 
   const getInitialZoom = () => {
     try {
-      const savedSettings = localStorage.getItem('appSettings');
+      const savedSettings = localStorage.getItem("appSettings");
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
         return parsed.mapDefaultZoom || 13;
@@ -53,9 +52,18 @@ export default function FloodMapView({
   };
 
   const initialZoom = useRef<number>(getInitialZoom());
-  const [wards, setWards] = useState<WardData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Use React Query to fetch ward data
+  const {
+    data: wardsResponse,
+    isLoading,
+    error: wardsError,
+  } = useWards({ limit: 100 });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const wards = wardsResponse?.wards || [];
+  const error = wardsError?.message || null;
+
   const [showRoads, setShowRoads] = useState(false);
   const [showBuildings, setShowBuildings] = useState(false);
   const [selectedWardDetail, setSelectedWardDetail] = useState<{
@@ -71,32 +79,6 @@ export default function FloodMapView({
     susceptibility: number;
     resilience: number;
   } | null>(null);
-
-  // Fetch ward data from backend
-  useEffect(() => {
-    const fetchWards = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await wardService.getWards({ limit: 1000 }); // Get all wards
-        setWards(response.wards);
-      } catch (err) {
-        console.error('Failed to fetch ward data:', err);
-        setError('Không thể tải dữ liệu phường/xã. Sử dụng dữ liệu mẫu.');
-        // Fallback to mock data if backend is not available
-        try {
-          const { mockWards } = await import('../../../mockData');
-          setWards(mockWards);
-        } catch (mockErr) {
-          console.error('Failed to load mock data:', mockErr);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchWards();
-  }, []);
 
   // Handle roads layer visibility
   useEffect(() => {
@@ -117,7 +99,7 @@ export default function FloodMapView({
 
     const getMapSettings = () => {
       try {
-        const savedSettings = localStorage.getItem('appSettings');
+        const savedSettings = localStorage.getItem("appSettings");
         if (savedSettings) {
           const parsed = JSON.parse(savedSettings);
           return {
@@ -138,14 +120,14 @@ export default function FloodMapView({
 
     // Create additional layers for better map visualization
     const roadsLayer = new TileLayer({
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer',
-      title: 'Đường giao thông',
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer",
+      title: "Đường giao thông",
       visible: showRoads,
     });
 
     const buildingsLayer = new FeatureLayer({
-      url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Administrative_Divisions/FeatureServer/0',
-      title: 'Khu vực hành chính',
+      url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Administrative_Divisions/FeatureServer/0",
+      title: "Khu vực hành chính",
       visible: showBuildings,
       opacity: 0.3,
     });
@@ -154,7 +136,7 @@ export default function FloodMapView({
     buildingsLayerRef.current = buildingsLayer;
 
     const map = new Map({
-      basemap: 'dark-gray-vector',
+      basemap: "dark-gray-vector",
       layers: [roadsLayer, buildingsLayer],
     });
 
@@ -169,7 +151,7 @@ export default function FloodMapView({
     viewRef.current = view;
 
     const wardLayer = new GraphicsLayer({
-      title: 'Bản đồ rủi ro ngập lụt',
+      title: "Bản đồ rủi ro ngập lụt",
       opacity: 0.8,
     });
     wardLayerRef.current = wardLayer;
@@ -179,7 +161,7 @@ export default function FloodMapView({
     return () => {
       view.destroy();
     };
-  }, [isLoading]);
+  }, [isLoading, showBuildings, showRoads]);
 
   useEffect(() => {
     if (!viewRef.current) return;
@@ -198,7 +180,7 @@ export default function FloodMapView({
 
             if (response.results.length > 0) {
               const result = response.results[0];
-              if ('graphic' in result && result.graphic) {
+              if ("graphic" in result && result.graphic) {
                 const graphic = result.graphic;
 
                 if (
@@ -208,17 +190,24 @@ export default function FloodMapView({
                   graphic.attributes.ward_name
                 ) {
                   const attributes = graphic.attributes;
-                  const ward = wards.find((w) => w.ward_name === attributes.ward_name);
+                  const ward = wards.find(
+                    (w) => w.ward_name === attributes.ward_name,
+                  );
 
                   if (ward) {
                     if (view.popup) {
                       view.popup.close();
                     }
 
-                    const exposure = ward.population_density / 1000 + ward.rainfall / 200;
+                    const exposure =
+                      ward.population_density / 1000 + ward.rainfall / 200;
                     const susceptibility = ward.low_elevation + ward.urban_land;
                     const resilience = ward.drainage_capacity || 1;
-                    const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+                    const floodRisk = calcFloodRiskIndex(
+                      exposure,
+                      susceptibility,
+                      resilience,
+                    );
                     const riskLevel = getRiskLevel(floodRisk);
                     const levelLabel = getRiskLevelLabel(riskLevel);
 
@@ -251,7 +240,7 @@ export default function FloodMapView({
           }
         };
 
-        clickHandle = view.on('click', handleClick);
+        clickHandle = view.on("click", handleClick);
       })
       .catch(() => {});
 
@@ -271,14 +260,17 @@ export default function FloodMapView({
       const exposure = ward.population_density / 1000 + ward.rainfall / 200;
       const susceptibility = ward.low_elevation + ward.urban_land;
       const resilience = ward.drainage_capacity || 1;
-      const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
-      const riskLevel = getRiskLevel(floodRisk);
+      const floodRisk = calcFloodRiskIndex(
+        exposure,
+        susceptibility,
+        resilience,
+      );
 
-      const matchesWard = !selectedWard || ward.ward_name === selectedWard;
-      const matchesRiskLevel = selectedRiskLevels.includes(riskLevel);
-      const matchesRiskIndex = floodRisk >= riskIndexRange[0] && floodRisk <= riskIndexRange[1];
+      // Only filter by risk index range (ward and risk level filtering is done by API)
+      const matchesRiskIndex =
+        floodRisk >= riskIndexRange[0] && floodRisk <= riskIndexRange[1];
 
-      return matchesWard && matchesRiskLevel && matchesRiskIndex;
+      return matchesRiskIndex;
     });
 
     if (onFilteredCountChange) {
@@ -290,7 +282,11 @@ export default function FloodMapView({
       const susceptibility = ward.low_elevation + ward.urban_land;
       const resilience = ward.drainage_capacity || 1;
 
-      const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      const floodRisk = calcFloodRiskIndex(
+        exposure,
+        susceptibility,
+        resilience,
+      );
       const riskLevel = getRiskLevel(floodRisk);
       const color = getRiskColor(riskLevel);
       const outlineColor = getRiskOutlineColor(riskLevel);
@@ -317,7 +313,7 @@ export default function FloodMapView({
           resilience: resilience,
         },
         symbol: {
-          type: 'simple-fill',
+          type: "simple-fill",
           color,
           outline: {
             width: 0.8,
@@ -330,14 +326,23 @@ export default function FloodMapView({
         wardLayerRef.current.add(graphic);
       }
     });
-  }, [selectedWard, selectedRiskLevels, riskIndexRange, onFilteredCountChange]);
+  }, [
+    selectedWard,
+    selectedRiskLevels,
+    riskIndexRange,
+    onFilteredCountChange,
+    wards,
+  ]);
 
   if (isLoading) {
     return (
-      <div className='relative w-full flex items-center justify-center' style={{ height: '495px' }}>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4'></div>
-          <p className='text-gray-600'>Đang tải bản đồ...</p>
+      <div
+        className="relative w-full flex items-center justify-center"
+        style={{ height: "495px" }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải bản đồ...</p>
         </div>
       </div>
     );
@@ -345,42 +350,45 @@ export default function FloodMapView({
 
   if (error) {
     return (
-      <div className='relative w-full flex items-center justify-center' style={{ height: '495px' }}>
-        <div className='text-center'>
-          <div className='text-red-500 mb-4'>⚠️ {error}</div>
-          <p className='text-gray-600'>Vui lòng thử lại sau.</p>
+      <div
+        className="relative w-full flex items-center justify-center"
+        style={{ height: "495px" }}
+      >
+        <div className="text-center">
+          <div className="text-red-500 mb-4">⚠️ {error}</div>
+          <p className="text-gray-600">Vui lòng thử lại sau.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='relative w-full' style={{ height: '495px' }}>
+    <div className="relative w-full" style={{ height: "495px" }}>
       <div
         ref={mapDiv}
-        className='absolute inset-0 w-full h-full'
-        style={{ pointerEvents: 'auto' }}
+        className="absolute inset-0 w-full h-full"
+        style={{ pointerEvents: "auto" }}
       />
 
       {/* Layer Controls */}
-      <div className='absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg'>
-        <h4 className='text-sm font-semibold mb-2 text-gray-800'>Lớp bản đồ</h4>
-        <div className='space-y-2'>
-          <label className='flex items-center text-sm'>
+      <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+        <h4 className="text-sm font-semibold mb-2 text-gray-800">Lớp bản đồ</h4>
+        <div className="space-y-2">
+          <label className="flex items-center text-sm">
             <input
-              type='checkbox'
+              type="checkbox"
               checked={showRoads}
               onChange={(e) => setShowRoads(e.target.checked)}
-              className='mr-2'
+              className="mr-2"
             />
             Đường giao thông
           </label>
-          <label className='flex items-center text-sm'>
+          <label className="flex items-center text-sm">
             <input
-              type='checkbox'
+              type="checkbox"
               checked={showBuildings}
               onChange={(e) => setShowBuildings(e.target.checked)}
-              className='mr-2'
+              className="mr-2"
             />
             Khu vực hành chính
           </label>

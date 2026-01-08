@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaBell, FaUserCircle, FaSync, FaHome } from "react-icons/fa";
-import { getCurrentUser } from "../../../pages/Login/authService";
-import type { User } from "../../../types";
+import { useAuth } from "../../../contexts/AuthContext";
 import { HOME_PATH } from "../../../router/routePath";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
@@ -14,8 +13,8 @@ interface AdminHeaderProps {
 export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const themeClasses = getThemeClasses(theme);
-  const [user] = useState<User | null>(() => getCurrentUser());
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const isAdmin = user?.role === "admin";
@@ -131,4 +130,3 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
     </header>
   );
 }
-

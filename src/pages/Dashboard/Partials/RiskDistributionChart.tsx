@@ -7,7 +7,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -85,9 +84,11 @@ export default function RiskDistributionChart({
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percentage }) =>
-                `${name}: ${percentage.toFixed(1)}%`
-              }
+              label={({ name, value }) => {
+                const total = pieData.reduce((sum, item) => sum + item.value, 0);
+                const percentage = (value / total) * 100;
+                return `${name}: ${percentage.toFixed(1)}%`;
+              }}
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"

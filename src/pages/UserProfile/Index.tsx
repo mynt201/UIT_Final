@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { IoMdColorFilter, IoMdCheckmark, IoMdClose } from "react-icons/io";
-import { getCurrentUser, updateUserProfile } from "../Login/authService";
+
 import * as yup from "yup";
+import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { Input, Button } from "../../components";
-import type { UpdateUserProfileData, User } from "../../types";
+import type { UpdateUserProfileData } from "../../types";
 
 const profileSchema = yup.object().shape({
   fullName: yup.string(),
@@ -15,7 +16,7 @@ const profileSchema = yup.object().shape({
 });
 
 export default function UserProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<UpdateUserProfileData>({
     fullName: "",
@@ -28,17 +29,15 @@ export default function UserProfilePage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
+    if (user) {
       setFormData({
-        fullName: currentUser.fullName || "",
-        phone: currentUser.phone || "",
-        address: currentUser.address || "",
-        email: currentUser.email || "",
+        fullName: user.fullName || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        email: user.email || "",
       });
     }
-  }, []);
+  }, [user]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -77,8 +76,7 @@ export default function UserProfilePage() {
       if (!user) return;
 
       setIsLoading(true);
-      const updatedUser = await updateUserProfile(user.id, formData);
-      setUser(updatedUser);
+      await updateUser(formData);
       setIsEditing(false);
       setSuccessMessage("Cập nhật thông tin thành công!");
       setTimeout(() => setSuccessMessage(""), 3000);

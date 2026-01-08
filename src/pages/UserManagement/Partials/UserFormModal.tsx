@@ -1,4 +1,3 @@
-import { type User } from "../../Login/authService";
 import { Modal, Input, Select, Button } from "../../../components";
 
 interface UserFormModalProps {

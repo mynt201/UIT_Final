@@ -1,4 +1,4 @@
-export interface WardData {
+export interface WardManagementData {
   id: string;
   ward_name: string;
   district: string;
@@ -9,7 +9,12 @@ export interface WeatherData {
   id: string;
   ward_id: string;
   date: string;
-  temperature: number;
+  temperature: {
+    current: number;
+    min: number;
+    max: number;
+    feels_like: number;
+  };
   humidity: number;
   rainfall: number;
   wind_speed: number;

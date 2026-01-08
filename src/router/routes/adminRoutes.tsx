@@ -10,7 +10,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: ADMIN_PATH,
     element: (
-      <RoleGuard allowRoles={["admin"]}>
+      <RoleGuard>
         <AdminLayout />
       </RoleGuard>
     ),

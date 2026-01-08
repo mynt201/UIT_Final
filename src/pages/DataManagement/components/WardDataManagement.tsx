@@ -16,7 +16,7 @@ const WardDataManagement = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingWard, setEditingWard] = useState<WardData | null>(null);
-  const [wards, setWards] = useState<WardManagementData[]>([]);
+  const [wards, setWards] = useState<WardData[]>([]);
 
   const [formData, setFormData] = useState<WardData>({
     ward_id: "",
@@ -110,18 +110,18 @@ const WardDataManagement = () => {
           {
             header: "Diện tích (km²)",
             accessor: "area",
-            render: (value) => value.toLocaleString(),
+            render: (value) => (value as number).toLocaleString(),
           },
           {
             header: "Dân số",
             accessor: "population",
-            render: (value) => value.toLocaleString(),
+            render: (value) => (value as number).toLocaleString(),
           },
           {
             header: "Tọa độ",
             accessor: "coordinates",
             render: (value) => (
-              <span className="text-sm">{value}</span>
+              <span className="text-sm">{value as string}</span>
             ),
           },
           {

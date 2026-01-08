@@ -278,7 +278,7 @@ const YearlyStatistics = () => {
             {
               header: 'Thay đổi (%)',
               accessor: 'year',
-              render: (value, row, index) => {
+              render: (_, __, index) => {
                 if (typeof index !== 'number' || index === 0) {
                   return <span className={themeClasses.textSecondary}>-</span>;
                 }

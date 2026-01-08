@@ -1,6 +1,18 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService } from '../services/authService';
-import type { User, LoginCredentials, RegisterCredentials, AuthData } from '../types/auth';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type JSX,
+  type ReactNode,
+} from "react";
+import { authService } from "../services/authService";
+import type {
+  User,
+  LoginCredentials,
+  RegisterCredentials,
+  AuthData,
+} from "../types/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -20,17 +32,27 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Global auth state for debugging
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).authState = {
+      user,
+      token,
+      isAuthenticated: !!user && !!token,
+    };
+  }, [user, token]);
 
   useEffect(() => {
     // Check if user is already logged in on app start
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('userData');
+        const storedToken = localStorage.getItem("authToken");
+        const storedUser = localStorage.getItem("userData");
 
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
@@ -41,10 +63,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await authService.getProfile();
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        // eslint-disable-next-line no-console
+        console.error("Auth initialization error:", error);
         // Clear invalid stored data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
       } finally {
         setIsLoading(false);
       }
@@ -53,17 +76,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
       setIsLoading(true);
       const authData: AuthData = await authService.login(credentials);
 
+      // Store in localStorage first
+      localStorage.setItem("authToken", authData.token);
+      localStorage.setItem("userData", JSON.stringify(authData.user));
+
+      // Then update state
       setToken(authData.token);
       setUser(authData.user);
-
-      // Store in localStorage
-      localStorage.setItem('authToken', authData.token);
-      localStorage.setItem('userData', JSON.stringify(authData.user));
+      // eslint-disable-next-line no-useless-catch
     } catch (error) {
       throw error;
     } finally {
@@ -71,17 +96,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (credentials: RegisterCredentials) => {
+  const register = async (credentials: RegisterCredentials): Promise<void> => {
     try {
       setIsLoading(true);
       const authData: AuthData = await authService.register(credentials);
 
+      // Store in localStorage first
+      localStorage.setItem("authToken", authData.token);
+      localStorage.setItem("userData", JSON.stringify(authData.user));
+
+      // Then update state
       setToken(authData.token);
       setUser(authData.user);
-
-      // Store in localStorage
-      localStorage.setItem('authToken', authData.token);
-      localStorage.setItem('userData', JSON.stringify(authData.user));
+      // eslint-disable-next-line no-useless-catch
     } catch (error) {
       throw error;
     } finally {
@@ -89,34 +116,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (): void => {
     setToken(null);
     setUser(null);
 
     // Clear localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userData");
   };
 
-  const updateUser = async (userData: Partial<User>) => {
+  const updateUser = async (userData: Partial<User>): Promise<void> => {
+    // eslint-disable-next-line no-useless-catch
     try {
       const response = await authService.updateProfile(userData);
       const updatedUser = response.user;
 
       setUser(updatedUser);
-      localStorage.setItem('userData', JSON.stringify(updatedUser));
+      localStorage.setItem("userData", JSON.stringify(updatedUser));
     } catch (error) {
       throw error;
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<void> => {
     try {
       const response = await authService.getProfile();
       const refreshedUser = response.user;
 
       setUser(refreshedUser);
-      localStorage.setItem('userData', JSON.stringify(refreshedUser));
+      localStorage.setItem("userData", JSON.stringify(refreshedUser));
     } catch (error) {
       // If refresh fails, logout
       logout();
@@ -139,10 +167,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

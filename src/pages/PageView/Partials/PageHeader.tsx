@@ -1,35 +1,18 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../../assets/logo.jpg';
 import { IoIosPerson } from 'react-icons/io';
 import { IoMdLogOut, IoMdLogIn } from 'react-icons/io';
-import { getCurrentUser, logout } from '../../Login/authService';
-import type { User } from '../../../types';
+import { useAuth } from '../../../contexts/AuthContext';
 import { LOGIN_PATH } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
 
 export default function PageHeader() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(() => getCurrentUser());
-
-  useEffect(() => {
-    // Kiểm tra user mỗi khi component mount hoặc khi có thay đổi
-    const checkUser = () => {
-      setUser(getCurrentUser());
-    };
-
-    checkUser();
-
-    // Kiểm tra định kỳ để cập nhật khi user đăng nhập/đăng xuất ở tab khác
-    const interval = setInterval(checkUser, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
-    setUser(null);
     navigate('/');
   };
 

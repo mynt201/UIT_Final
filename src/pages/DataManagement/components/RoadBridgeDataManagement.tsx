@@ -5,14 +5,6 @@ import { getThemeClasses } from "../../../utils/themeUtils";
 import { Table, Input, Select, Modal, Button } from "../../../components";
 import type { RoadBridgeData } from "../../../types/dataManagement";
 
-interface RoadBridgeDataProps {
-  id: string;
-  ward_id: string;
-  name: string;
-  type: string;
-  flood_level: number;
-}
-
 const RoadBridgeDataManagement = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
