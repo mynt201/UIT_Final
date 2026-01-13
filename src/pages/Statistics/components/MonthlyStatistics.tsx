@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 
 import type { MonthlyStatisticsProps } from '../../../types';
+import { formatNumber } from '../../../utils/formatUtils';
 import { Select, Table } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
@@ -105,7 +106,7 @@ const MonthlyStatistics = ({ selectedYear, onYearChange }: MonthlyStatisticsProp
             <div className='${themeClasses.textSecondary} text-sm'>Tổng lượng mưa</div>
           </div>
           <div className='text-2xl font-bold ${themeClasses.text}'>
-            {totalRainfall.toLocaleString()} mm
+            {formatNumber(totalRainfall)} mm
           </div>
         </div>
         <div

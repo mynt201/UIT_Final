@@ -5,6 +5,7 @@ import {
 } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
+import { formatNumber } from "../../../utils/formatUtils";
 import type { Statistics } from "../../../types";
 
 interface StatisticsCardsProps {
@@ -91,7 +92,7 @@ export default function StatisticsCards({
         <div className="text-3xl font-bold text-indigo-400 mb-1">
           {Math.round(
             statistics.totalPopulation / statistics.totalWards,
-          ).toLocaleString()}
+          ).toLocaleString('vi-VN')}
         </div>
         <div className={`text-sm ${themeClasses.textSecondary}`}>
           người/km²

@@ -1,5 +1,6 @@
 export interface User {
-  id: string;
+  _id: string;
+  id?: string; // For backward compatibility
   username: string;
   email: string;
   role: "admin" | "user";
@@ -9,6 +10,7 @@ export interface User {
   createdAt?: string;
   lastLogin?: string;
   avatar?: string;
+  displayName?: string;
 }
 
 export interface AuthData {

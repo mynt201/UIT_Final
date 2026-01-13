@@ -1,25 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type JSX,
-  type ReactNode,
-} from "react";
-import { authService } from "../services/authService";
-import type {
-  User,
-  LoginCredentials,
-  RegisterCredentials,
-  AuthData,
-} from "../types/auth";
+import { createContext, useContext, useEffect, useState, type JSX, type ReactNode } from 'react';
+import { authService } from '../services/authService';
+import type { User, LoginCredentials, RegisterCredentials, AuthData } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => Promise<void>;
@@ -44,15 +32,22 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       user,
       token,
       isAuthenticated: !!user && !!token,
+      userRole: user?.role,
+      userId: user?._id,
     };
+    console.log('AuthContext Debug:', {
+      user: user ? { role: user.role, email: user.email, _id: user._id } : null,
+      token: token ? 'present' : 'null',
+      isAuthenticated: !!user && !!token,
+    });
   }, [user, token]);
 
   useEffect(() => {
     // Check if user is already logged in on app start
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem("authToken");
-        const storedUser = localStorage.getItem("userData");
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('userData');
 
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
@@ -64,10 +59,10 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         }
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error("Auth initialization error:", error);
+        console.error('Auth initialization error:', error);
         // Clear invalid stored data
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userData");
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
       } finally {
         setIsLoading(false);
       }
@@ -76,18 +71,19 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     try {
       setIsLoading(true);
       const authData: AuthData = await authService.login(credentials);
 
-      // Store in localStorage first
-      localStorage.setItem("authToken", authData.token);
-      localStorage.setItem("userData", JSON.stringify(authData.user));
+      localStorage.setItem('authToken', authData.token);
+      localStorage.setItem('userData', JSON.stringify(authData.user));
 
       // Then update state
       setToken(authData.token);
       setUser(authData.user);
+
+      return authData.user;
       // eslint-disable-next-line no-useless-catch
     } catch (error) {
       throw error;
@@ -102,8 +98,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       const authData: AuthData = await authService.register(credentials);
 
       // Store in localStorage first
-      localStorage.setItem("authToken", authData.token);
-      localStorage.setItem("userData", JSON.stringify(authData.user));
+      localStorage.setItem('authToken', authData.token);
+      localStorage.setItem('userData', JSON.stringify(authData.user));
 
       // Then update state
       setToken(authData.token);
@@ -121,8 +117,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     setUser(null);
 
     // Clear localStorage
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
   };
 
   const updateUser = async (userData: Partial<User>): Promise<void> => {
@@ -132,7 +128,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       const updatedUser = response.user;
 
       setUser(updatedUser);
-      localStorage.setItem("userData", JSON.stringify(updatedUser));
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
     } catch (error) {
       throw error;
     }
@@ -144,7 +140,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       const refreshedUser = response.user;
 
       setUser(refreshedUser);
-      localStorage.setItem("userData", JSON.stringify(refreshedUser));
+      localStorage.setItem('userData', JSON.stringify(refreshedUser));
     } catch (error) {
       // If refresh fails, logout
       logout();
@@ -171,7 +167,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

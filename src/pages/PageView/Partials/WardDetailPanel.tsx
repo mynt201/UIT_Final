@@ -1,6 +1,7 @@
 import { IoMdClose } from 'react-icons/io';
 import { getRiskColor } from './floodRiskUtils';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { formatNumber } from '../../../utils/formatUtils';
 import type { WardDetail } from '../../../types';
 
 interface WardDetailPanelProps {
@@ -43,7 +44,7 @@ export default function WardDetailPanel({ ward, onClose }: WardDetailPanelProps)
             <div className='text-white/80 text-sm'>
               <span className='opacity-60'>Mật độ dân số:</span>{' '}
               <span className='font-semibold text-white'>
-                {ward.population_density.toLocaleString()} người/km²
+                {formatNumber(ward.population_density)} người/km²
               </span>
             </div>
             <div className='text-white/80 text-sm'>

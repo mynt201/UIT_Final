@@ -1,0 +1,4 @@
+﻿Mã công trình,Mã phường xã,Loại công trình,Tên công trình,Chiều dài (m),Chiều rộng (m),Chiều cao (m),Vật liệu,Tọa độ,Trạng thái,Kiểm tra cuối,Mô tả
+RD001,001,Đường,Nguyễn Huệ,2500,20,,Nhựa đường,"10.7769,106.7009",Tốt,2024-01-12,Đường chính trung tâm thành phố
+BR001,002,Cầu,Cầu Thị Nghè,150,15,8,Bê tông,"10.7744,106.7025",Tốt,2024-01-08,Cầu vượt sông Sài Gòn
+RD002,001,Đường,Lê Lợi,1800,12,,Bê tông,"10.7721,106.6985",Khá,2024-01-10,Đường nội khu dân cư

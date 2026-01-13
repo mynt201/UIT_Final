@@ -1,0 +1,4 @@
+﻿Mã cống,Mã phường xã,Loại cống,Chiều dài (m),Đường kính (m),Vật liệu,Tọa độ,Trạng thái,Bảo trì cuối,Mô tả
+DR001,001,Cống chính,1500,0.5,Bê tông,"10.7769,106.7009",Hoạt động,2024-01-10,Ống cống chính khu vực trung tâm thành phố
+DR002,001,Cống nhánh,800,0.3,Nhựa PVC,"10.7744,106.7025",Hoạt động,2024-01-08,Ống nhánh khu dân cư đông đúc
+DR003,002,Cống chính,1200,0.4,Bê tông,"10.7721,106.6985",Đang bảo trì,2024-01-12,Cống chính cần bảo trì định kỳ

@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { IoMdColorFilter, IoMdCheckmark, IoMdClose } from "react-icons/io";
+import { useFormik } from "formik";
 
 import * as yup from "yup";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
+import { formatDate } from "../../utils/formatUtils";
 import { Input, Button } from "../../components";
 import type { UpdateUserProfileData } from "../../types";
 
@@ -18,19 +20,34 @@ const profileSchema = yup.object().shape({
 export default function UserProfilePage() {
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<UpdateUserProfileData>({
-    fullName: "",
-    phone: "",
-    address: "",
-    email: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const formik = useFormik({
+    initialValues: {
+      fullName: "",
+      phone: "",
+      address: "",
+      email: "",
+    },
+    validationSchema: profileSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        if (!user) return;
+
+        await updateUser(values);
+        setSuccessMessage("Cập nhật thông tin thành công!");
+        setIsEditing(false);
+      } catch (err) {
+        console.error("Update failed:", err);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   useEffect(() => {
     if (user) {
-      setFormData({
+      formik.setValues({
         fullName: user.fullName || "",
         phone: user.phone || "",
         address: user.address || "",
@@ -41,61 +58,25 @@ export default function UserProfilePage() {
 
   const handleEdit = () => {
     setIsEditing(true);
-    setErrors({});
     setSuccessMessage("");
+    formik.setErrors({});
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     if (user) {
-      setFormData({
+      formik.setValues({
         fullName: user.fullName || "",
         phone: user.phone || "",
         address: user.address || "",
         email: user.email || "",
       });
     }
-    setErrors({});
     setSuccessMessage("");
+    formik.setErrors({});
   };
 
-  const handleChange = (field: keyof UpdateUserProfileData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-    setSuccessMessage("");
-
-    try {
-      await profileSchema.validate(formData, { abortEarly: false });
-      if (!user) return;
-
-      setIsLoading(true);
-      await updateUser(formData);
-      setIsEditing(false);
-      setSuccessMessage("Cập nhật thông tin thành công!");
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (err) {
-      if (err instanceof yup.ValidationError) {
-        const validationErrors: Record<string, string> = {};
-        err.inner.forEach((error) => {
-          if (error.path) {
-            validationErrors[error.path] = error.message;
-          }
-        });
-        setErrors(validationErrors);
-      } else if (err instanceof Error) {
-        setErrors({ submit: err.message });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
@@ -111,9 +92,13 @@ export default function UserProfilePage() {
     );
   }
 
-  const formatDate = (dateString?: string) => {
+  const formatDateLocal = (dateString?: string) => {
     if (!dateString) return "Chưa có";
-    return new Date(dateString).toLocaleString("vi-VN");
+    try {
+      return new Date(dateString).toLocaleString("vi-VN");
+    } catch (error) {
+      return "Ngày không hợp lệ";
+    }
   };
 
   return (
@@ -149,7 +134,7 @@ export default function UserProfilePage() {
       <div
         className={`${themeClasses.container} rounded-xl shadow-2xl p-6 max-w-2xl`}
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={formik.handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label

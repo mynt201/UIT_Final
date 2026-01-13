@@ -1,5 +1,6 @@
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
+import { formatNumber } from "../../../utils/formatUtils";
 import type { AdditionalStatistics } from "../../../types";
 
 interface AdditionalStatisticsGridProps {
@@ -49,7 +50,7 @@ export default function AdditionalStatisticsGrid({
           Tổng mật độ dân số
         </div>
         <div className="text-2xl font-bold text-indigo-400 mb-1">
-          {Math.round(statistics.totalPopulation).toLocaleString()}
+          {formatNumber(Math.round(statistics.totalPopulation))}
         </div>
         <div className={`text-xs ${themeClasses.textTertiary}`}>
           người/km²

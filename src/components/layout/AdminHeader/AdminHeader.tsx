@@ -28,15 +28,19 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
   }, []);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleString("vi-VN", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    try {
+      return date.toLocaleString("vi-VN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (error) {
+      return "Thời gian không hợp lệ";
+    }
   };
 
   const handleGoToHome = () => {

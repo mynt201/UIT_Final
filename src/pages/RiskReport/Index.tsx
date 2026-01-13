@@ -6,6 +6,7 @@ import {
 } from "../PageView/Partials/floodRiskUtils";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
+import { formatNumber } from "../../utils/formatUtils";
 import { Button } from "../../components";
 
 export default function RiskReportPage() {
@@ -111,7 +112,7 @@ export default function RiskReportPage() {
             Mật độ dân số TB
           </div>
           <div className={`${themeClasses.text} text-2xl font-bold`}>
-            {Math.round(avgPopulation).toLocaleString()}
+            {formatNumber(Math.round(avgPopulation))}
           </div>
         </div>
         <div

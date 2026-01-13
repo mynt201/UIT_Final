@@ -3,6 +3,7 @@ import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { Table, Select } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
+import { formatNumber } from '../../../utils/formatUtils';
 
 const YearlyStatistics = () => {
   const { theme } = useTheme();
@@ -91,7 +92,7 @@ const YearlyStatistics = () => {
         >
           <div className={`${themeClasses.textSecondary} text-sm mb-2`}>Tổng lượng mưa</div>
           <div className={`text-2xl font-bold ${themeClasses.text}`}>
-            {yearlyData[yearlyData.length - 1]?.totalRainfall.toLocaleString()} mm
+            {formatNumber(yearlyData[yearlyData.length - 1]?.totalRainfall)} mm
           </div>
         </div>
         <div
@@ -153,7 +154,7 @@ const YearlyStatistics = () => {
                         </span>
                       )}
                       <span className={`font-bold ${themeClasses.text}`}>
-                        {data.totalRainfall.toLocaleString()} mm
+                        {formatNumber(data.totalRainfall)} mm
                       </span>
                     </div>
                   </div>
@@ -258,7 +259,7 @@ const YearlyStatistics = () => {
             {
               header: 'Tổng lượng mưa (mm)',
               accessor: 'totalRainfall',
-              render: (value) => `${Number(value).toLocaleString()} mm`,
+              render: (value) => `${formatNumber(value)} mm`,
             },
             {
               header: 'Chỉ số rủi ro TB',

@@ -2,6 +2,7 @@ import { FaMapMarkedAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Table, Button } from "../../../components";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
+import { formatNumber } from "../../../utils/formatUtils";
 import type { WardStat } from "../../../types";
 
 interface WardsTableProps {
@@ -83,7 +84,7 @@ export default function WardsTable({
             accessor: "population_density",
             render: (value) => (
               <span className={themeClasses.text}>
-                {Number(value).toLocaleString()} người/km²
+                {formatNumber(value)} người/km²
               </span>
             ),
           },

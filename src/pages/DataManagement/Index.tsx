@@ -5,6 +5,7 @@ import {
   FaWater,
   FaRoad,
   FaChartLine,
+  FaDownload,
 } from "react-icons/fa";
 import WardDataManagement from "./components/WardDataManagement";
 import WeatherDataManagement from "./components/WeatherDataManagement";
@@ -13,6 +14,7 @@ import RoadBridgeDataManagement from "./components/RoadBridgeDataManagement";
 import RiskIndexManagement from "./components/RiskIndexManagement";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
+import { Button } from "../../components";
 import type { TabType } from "../../types";
 
 const DataManagementPage = () => {
@@ -46,6 +48,48 @@ const DataManagementPage = () => {
     },
   ];
 
+  // Function to download Excel template based on active tab
+  const downloadTemplate = () => {
+    const templateUrls = {
+      ward: "/templates/ward-data-template.csv",
+      weather: "/templates/weather-data-template.csv",
+      drainage: "/templates/drainage-data-template.csv",
+      "road-bridge": "/templates/road-bridge-data-template.csv",
+      "risk-index": "/templates/risk-index-data-template.csv",
+    };
+
+    const templateUrl = templateUrls[activeTab];
+    const currentTab = tabs.find(tab => tab.id === activeTab);
+
+    try {
+      // Create a temporary link to download the file
+      const link = document.createElement("a");
+      link.href = templateUrl;
+      link.download = `${currentTab?.label.replace(/\s+/g, '_').toLowerCase()}_template.csv`;
+      link.target = "_blank"; // Open in new tab if download fails
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Template download error:", error);
+      // Fallback: Show template structure in alert
+      const templateStructure = getTemplateStructure(activeTab);
+      alert(`Template cho ${currentTab?.label}:\n\nCấu trúc cột: ${templateStructure}\n\nVui lòng tạo file CSV với các cột theo thứ tự trên và điền dữ liệu phù hợp.`);
+    }
+  };
+
+  // Function to get template structure description
+  const getTemplateStructure = (tabId: TabType): string => {
+    const structures = {
+      ward: "Mã phường xã,Tên phường xã,Quận huyện,Tỉnh thành phố,Dân số,Diện tích (km²),Tọa độ,Mô tả",
+      weather: "Ngày,Mã phường xã,Nhiệt độ (°C),Độ ẩm (%),Tốc độ gió (km/h),Hướng gió,Lượng mưa (mm),Áp suất (hPa),Mô tả thời tiết",
+      drainage: "Mã cống,Mã phường xã,Loại cống,Chiều dài (m),Đường kính (m),Vật liệu,Tọa độ,Trạng thái,Bảo trì cuối,Mô tả",
+      "road-bridge": "Mã công trình,Mã phường xã,Loại công trình,Tên công trình,Chiều dài (m),Chiều rộng (m),Chiều cao (m),Vật liệu,Tọa độ,Trạng thái,Kiểm tra cuối,Mô tả",
+      "risk-index": "Mã phường xã,Ngày đánh giá,Rủi ro mưa,Rủi ro thoát nước,Rủi ro lịch sử ngập,Rủi ro địa hình,Rủi ro mật độ dân số,Rủi ro tổng thể,Mô tả đánh giá"
+    };
+    return structures[tabId] || "Không có cấu trúc template";
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "ward":
@@ -72,13 +116,27 @@ const DataManagementPage = () => {
     >
       {/* Header */}
       <div className="mb-6">
-        <h1 className={`text-3xl font-bold mb-2 ${themeClasses.text}`}>
-          Quản lý Dữ liệu Bản đồ
-        </h1>
-        <p className={themeClasses.textSecondary}>
-          Upload và quản lý các chỉ số, vị trí cho hệ thống đánh giá rủi ro ngập
-          lụt
-        </p>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h1 className={`text-3xl font-bold mb-2 ${themeClasses.text}`}>
+              Quản lý Dữ liệu Bản đồ
+            </h1>
+            <p className={themeClasses.textSecondary}>
+              Upload và quản lý các chỉ số, vị trí cho hệ thống đánh giá rủi ro ngập
+              lụt
+            </p>
+          </div>
+          <div className="ml-4">
+            <Button
+              variant="secondary"
+              onClick={downloadTemplate}
+              className="flex items-center gap-2"
+            >
+              <FaDownload />
+              <span>Tải Template CSV</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
