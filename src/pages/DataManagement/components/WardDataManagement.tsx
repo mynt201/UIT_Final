@@ -1,18 +1,37 @@
-import { useState, useEffect } from "react";
-import { FaUpload, FaEdit, FaTrash, FaPlus, FaCheckCircle, FaExclamationTriangle, FaTimesCircle, FaSync } from "react-icons/fa";
-import { useTheme } from "../../../contexts/ThemeContext";
-import { getThemeClasses } from "../../../utils/themeUtils";
-import { Table, Input, Textarea, Modal, Button } from "../../../components";
+import { useState } from 'react';
+import {
+  FaUpload,
+  FaEdit,
+  FaTrash,
+  FaPlus,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaTimesCircle,
+  FaSync,
+} from 'react-icons/fa';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getThemeClasses } from '../../../utils/themeUtils';
+import { Table, Input, Textarea, Modal, Button } from '../../../components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatNumber } from "../../../utils/formatUtils";
-import toast from "react-hot-toast";
+import { formatNumber } from '../../../utils/formatUtils';
+import toast from 'react-hot-toast';
+import { api } from '../../../plugins/axios';
 
 interface WardData {
-  ward_id: string;
-  name: string;
-  area: number;
+  _id?: string;
+  ward_code: string;
+  ward_name: string;
+  district: string;
+  province: string;
   population: number;
-  coordinates: string;
+  area: number;
+  geometry: {
+    type: string;
+    coordinates: number[];
+  };
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const WardDataManagement = () => {
@@ -30,52 +49,50 @@ const WardDataManagement = () => {
   const queryClient = useQueryClient();
 
   // Fetch wards from backend
-  const { data: wardsData, isLoading: loadingWards, refetch: refetchWards } = useQuery({
+  const {
+    data: wardsData,
+    isLoading: loadingWards,
+    refetch: refetchWards,
+  } = useQuery({
     queryKey: ['wards'],
     queryFn: async () => {
-      const response = await fetch('/api/wards', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const result = await response.json();
-      return result.wards || [];
-    }
+      const response = await api.get('/wards');
+      return response.data.wards || [];
+    },
   });
 
   const wards = wardsData || [];
 
-  const [formData, setFormData] = useState<WardData>({
-    ward_id: "",
-    name: "",
+  const [formData, setFormData] = useState({
+    ward_code: '',
+    ward_name: '',
+    district: '',
+    province: '',
     area: 0,
     population: 0,
-    coordinates: "",
+    coordinates: '',
+    description: '',
   });
 
   // Mutations for CRUD operations
   const createWardMutation = useMutation({
     mutationFn: async (wardData: any) => {
-      const response = await fetch('/api/wards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(wardData)
-      });
-      return response.json();
+      const response = await api.post('/wards', wardData);
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Thêm phường/xã thành công!');
       queryClient.invalidateQueries({ queryKey: ['wards'] });
       setIsUploadModalOpen(false);
       setFormData({
-        ward_id: "",
-        name: "",
+        ward_code: '',
+        ward_name: '',
+        district: '',
+        province: '',
         area: 0,
         population: 0,
-        coordinates: "",
+        coordinates: '',
+        description: '',
       });
     },
     onError: (error: any) => {
@@ -84,16 +101,9 @@ const WardDataManagement = () => {
   });
 
   const updateWardMutation = useMutation({
-    mutationFn: async ({ id, wardData }: { id: string, wardData: any }) => {
-      const response = await fetch(`/api/wards/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(wardData)
-      });
-      return response.json();
+    mutationFn: async ({ id, wardData }: { id: string; wardData: any }) => {
+      const response = await api.put(`/wards/${id}`, wardData);
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Cập nhật phường/xã thành công!');
@@ -108,13 +118,8 @@ const WardDataManagement = () => {
 
   const deleteWardMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/wards/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      return response.json();
+      const response = await api.delete(`/wards/${id}`);
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Xóa phường/xã thành công!');
@@ -129,8 +134,8 @@ const WardDataManagement = () => {
     e.preventDefault();
     if (editingWard) {
       updateWardMutation.mutate({
-        id: editingWard._id || editingWard.ward_id,
-        wardData: formData
+        id: editingWard._id || editingWard.ward_code,
+        wardData: formData,
       });
     } else {
       createWardMutation.mutate(formData);
@@ -140,26 +145,36 @@ const WardDataManagement = () => {
   const handleEdit = (ward: WardData) => {
     setEditingWard(ward);
     setFormData({
-      ward_id: ward.ward_id || ward.ward_code || '',
-      name: ward.name || ward.ward_name || '',
+      ward_code: ward.ward_code || '',
+      ward_name: ward.ward_name || '',
+      district: ward.district || '',
+      province: ward.province || '',
       area: ward.area || 0,
       population: ward.population || 0,
-      coordinates: ward.coordinates || '',
+      coordinates: ward.geometry?.coordinates?.join(', ') || '',
+      description: ward.description || '',
     });
     setIsEditModalOpen(true);
   };
 
   const handleDelete = (wardId: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa phường/xã này?")) {
+    if (confirm('Bạn có chắc chắn muốn xóa phường/xã này?')) {
       deleteWardMutation.mutate(wardId);
     }
   };
 
   const parseCSV = (csvText: string): any[] => {
-    const lines = csvText.trim().split('\n');
+    // Remove BOM if present
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    const lines = cleanText.trim().split('\n');
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim());
+    const headers = lines[0].split(',').map((h) =>
+      h
+        .trim()
+        .replace(/["'\uFEFF]/g, '')
+        .toLowerCase()
+    );
     const data = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -170,7 +185,7 @@ const WardDataManagement = () => {
       const row: any = {};
 
       headers.forEach((header, index) => {
-        let value = values[index]?.trim() || '';
+        const value = values[index]?.trim() || '';
 
         // Convert to appropriate types
         if (header.includes('Dân số') || header.includes('Diện tích')) {
@@ -219,26 +234,34 @@ const WardDataManagement = () => {
     return result;
   };
 
-  const validateWardData = (data: any[]): { valid: any[], invalid: any[] } => {
+  const validateWardData = (data: any[]): { valid: unknown[]; invalid: any[] } => {
     const valid = [];
     const invalid = [];
 
     for (const row of data) {
       const errors = [];
 
-      if (!row['Mã phường xã'] || !row['Tên phường xã']) {
+      const wardCode = (row['mã phường xã'] || row['Mã phường xã'])?.toString().trim();
+      const wardName = (row['tên phường xã'] || row['Tên phường xã'])?.toString().trim();
+      const district = (row['quận huyện'] || row['Quận huyện'])?.toString().trim();
+      const province = (row['tỉnh thành phố'] || row['Tỉnh thành phố'])?.toString().trim();
+
+      if (!wardCode || !wardName) {
         errors.push('Thiếu mã hoặc tên phường xã');
       }
 
-      if (!row['Quận huyện'] || !row['Tỉnh thành phố']) {
+      if (!district || !province) {
         errors.push('Thiếu thông tin quận huyện hoặc tỉnh thành phố');
       }
 
-      if (row['Dân số'] <= 0) {
+      const population = Number(row['Dân số']);
+      const area = Number(row['Diện tích (km²)']);
+
+      if (population <= 0) {
         errors.push('Dân số phải lớn hơn 0');
       }
 
-      if (row['Diện tích (km²)'] <= 0) {
+      if (area <= 0) {
         errors.push('Diện tích phải lớn hơn 0');
       }
 
@@ -249,13 +272,13 @@ const WardDataManagement = () => {
       } else {
         // Convert coordinates to geometry
         let geometry = null;
-        const coordStr = row['Tọa độ'];
+        const coordStr = (row['tọa độ'] || row['Tọa độ'])?.toString().trim();
         if (coordStr) {
           const coords = coordStr.split(',').map((c: string) => parseFloat(c.trim()));
           if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
             geometry = {
               type: 'Point',
-              coordinates: [coords[1], coords[0]] // GeoJSON format: [longitude, latitude]
+              coordinates: [coords[1], coords[0]], // GeoJSON format: [longitude, latitude]
             };
           }
         }
@@ -266,14 +289,14 @@ const WardDataManagement = () => {
 
         // Convert to API format
         valid.push({
-          ward_code: row['Mã phường xã'],
-          ward_name: row['Tên phường xã'],
-          district: row['Quận huyện'],
-          province: row['Tỉnh thành phố'], // Note: backend uses 'province' not 'city'
-          population: row['Dân số'],
-          area: row['Diện tích (km²)'],
+          ward_code: wardCode,
+          ward_name: wardName,
+          district: district,
+          province: province, // Note: backend uses 'province' not 'city'
+          population: population,
+          area: area,
           geometry: geometry,
-          description: row['Mô tả'] || ''
+          description: (row['mô tả'] || row['Mô tả'])?.toString().trim() || '',
         });
       }
     }
@@ -305,22 +328,17 @@ const WardDataManagement = () => {
           successful: 0,
           failed: invalid.length,
           duplicates: 0,
-          details: invalid
+          details: invalid,
         });
         return;
       }
 
       // Upload to backend
-      const response = await fetch('/api/wards/bulk-import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ wards: valid })
+      const response = await api.post('/wards/bulk-import', {
+        wards: valid,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.success) {
         setUploadResults({
@@ -330,8 +348,8 @@ const WardDataManagement = () => {
           details: [
             ...result.results.successful.map((s: any) => ({ ...s, status: 'success' })),
             ...result.results.failed.map((f: any) => ({ ...f, status: 'failed' })),
-            ...result.results.duplicates.map((d: any) => ({ ...d, status: 'duplicate' }))
-          ]
+            ...result.results.duplicates.map((d: any) => ({ ...d, status: 'duplicate' })),
+          ],
         });
 
         toast.success(`Upload thành công: ${result.results.successful.length} phường/xã`);
@@ -352,37 +370,39 @@ const WardDataManagement = () => {
   const themeClasses = getThemeClasses(theme);
 
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* Action Buttons */}
-      <div className="flex justify-between items-center">
-        <h2 className={`text-xl font-semibold ${themeClasses.text}`}>
-          Quản lý Dữ liệu Phường/Xã
-        </h2>
-        <div className="flex gap-3">
+      <div className='flex justify-between items-center'>
+        <h2 className={`text-xl font-semibold ${themeClasses.text}`}>Quản lý Dữ liệu Phường/Xã</h2>
+        <div className='flex gap-3'>
           <button
             onClick={() => refetchWards()}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            className='flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors'
             disabled={loadingWards}
           >
             <FaSync className={loadingWards ? 'animate-spin' : ''} />
             <span>Làm mới</span>
           </button>
-          <label className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg cursor-pointer transition-colors ${
-            theme === 'light' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'
-          } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <label
+            className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg cursor-pointer transition-colors ${
+              theme === 'light'
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-indigo-500 hover:bg-indigo-600'
+            } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
             <FaUpload />
             <span>{isUploading ? 'Đang Upload...' : 'Upload File'}</span>
             <input
-              type="file"
-              accept=".csv"
+              type='file'
+              accept='.csv'
               onChange={handleFileUpload}
-              className="hidden"
+              className='hidden'
               disabled={isUploading}
             />
           </label>
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            className='flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors'
             disabled={isUploading}
           >
             <FaPlus />
@@ -393,52 +413,57 @@ const WardDataManagement = () => {
 
       {/* Upload Results */}
       {uploadResults && (
-        <div className={`p-4 rounded-lg border ${themeClasses.backgroundTertiary} ${themeClasses.border}`}>
-          <h3 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>
-            Kết quả Upload
-          </h3>
+        <div
+          className={`p-4 rounded-lg border ${themeClasses.backgroundTertiary} ${themeClasses.border}`}
+        >
+          <h3 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>Kết quả Upload</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="flex items-center gap-2 text-green-600">
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
+            <div className='flex items-center gap-2 text-green-600'>
               <FaCheckCircle />
               <span>Thành công: {uploadResults.successful}</span>
             </div>
-            <div className="flex items-center gap-2 text-red-600">
+            <div className='flex items-center gap-2 text-red-600'>
               <FaTimesCircle />
               <span>Thất bại: {uploadResults.failed}</span>
             </div>
-            <div className="flex items-center gap-2 text-yellow-600">
+            <div className='flex items-center gap-2 text-yellow-600'>
               <FaExclamationTriangle />
               <span>Trùng lặp: {uploadResults.duplicates}</span>
             </div>
           </div>
 
           {uploadResults.details.length > 0 && (
-            <div className="mt-4">
-              <h4 className={`text-md font-semibold mb-2 ${themeClasses.text}`}>
-                Chi tiết:
-              </h4>
-              <div className={`max-h-40 overflow-y-auto space-y-1 ${themeClasses.backgroundSecondary} p-2 rounded`}>
+            <div className='mt-4'>
+              <h4 className={`text-md font-semibold mb-2 ${themeClasses.text}`}>Chi tiết:</h4>
+              <div
+                className={`max-h-40 overflow-y-auto space-y-1 ${themeClasses.backgroundSecondary} p-2 rounded`}
+              >
                 {uploadResults.details.slice(0, 10).map((detail, index) => (
-                  <div key={index} className="text-sm">
-                    <span className={`font-medium ${
-                      detail.status === 'success' ? 'text-green-600' :
-                      detail.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
-                    }`}>
+                  <div key={index} className='text-sm'>
+                    <span
+                      className={`font-medium ${
+                        detail.status === 'success'
+                          ? 'text-green-600'
+                          : detail.status === 'failed'
+                          ? 'text-red-600'
+                          : 'text-yellow-600'
+                      }`}
+                    >
                       {detail.ward_name || detail.wardCode || `Row ${index + 1}`}
                     </span>
                     {detail.errors && (
-                      <span className="text-red-500 ml-2">
+                      <span className='text-red-500 ml-2'>
                         - {Array.isArray(detail.errors) ? detail.errors.join(', ') : detail.errors}
                       </span>
                     )}
                     {detail.reason && (
-                      <span className="text-yellow-500 ml-2">- {detail.reason}</span>
+                      <span className='text-yellow-500 ml-2'>- {detail.reason}</span>
                     )}
                   </div>
                 ))}
                 {uploadResults.details.length > 10 && (
-                  <div className="text-sm text-gray-500 italic">
+                  <div className='text-sm text-gray-500 italic'>
                     ... và {uploadResults.details.length - 10} kết quả khác
                   </div>
                 )}
@@ -451,46 +476,48 @@ const WardDataManagement = () => {
       {/* Data Table */}
       <Table
         columns={[
-          { header: "Mã phường xã", accessor: "ward_code" },
-          { header: "Tên phường/xã", accessor: "ward_name" },
-          { header: "Quận huyện", accessor: "district" },
-          { header: "Tỉnh thành phố", accessor: "province" },
+          { header: 'Mã phường xã', accessor: 'ward_code' },
+          { header: 'Tên phường/xã', accessor: 'ward_name' },
+          { header: 'Quận huyện', accessor: 'district' },
+          { header: 'Tỉnh thành phố', accessor: 'province' },
           {
-            header: "Diện tích (km²)",
-            accessor: "area",
+            header: 'Diện tích (km²)',
+            accessor: 'area',
             render: (value) => formatNumber(value),
           },
           {
-            header: "Dân số",
-            accessor: "population",
+            header: 'Dân số',
+            accessor: 'population',
             render: (value) => formatNumber(value),
           },
           {
-            header: "Tọa độ",
-            accessor: "coordinates",
-            render: (value) => (
-              <span className="text-sm">{value as string}</span>
-            ),
+            header: 'Tọa độ',
+            accessor: 'coordinates',
+            render: (value) => <span className='text-sm'>{value as string}</span>,
           },
           {
-            header: "Thao tác",
-            accessor: "_id",
+            header: 'Thao tác',
+            accessor: '_id',
             render: (_, row) => (
-              <div className="flex gap-2">
+              <div className='flex gap-2'>
                 <button
                   onClick={() => handleEdit(row)}
                   className={`p-2 rounded transition-colors ${
-                    theme === "light"
-                      ? "text-indigo-600 hover:bg-indigo-500/20"
-                      : "text-indigo-400 hover:bg-indigo-500/20"
+                    theme === 'light'
+                      ? 'text-indigo-600 hover:bg-indigo-500/20'
+                      : 'text-indigo-400 hover:bg-indigo-500/20'
                   }`}
-                  disabled={createWardMutation.isPending || updateWardMutation.isPending || deleteWardMutation.isPending}
+                  disabled={
+                    createWardMutation.isPending ||
+                    updateWardMutation.isPending ||
+                    deleteWardMutation.isPending
+                  }
                 >
                   <FaEdit />
                 </button>
                 <button
                   onClick={() => handleDelete((row as any)._id)}
-                  className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                  className='p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors'
                   disabled={deleteWardMutation.isPending}
                 >
                   <FaTrash />
@@ -499,8 +526,10 @@ const WardDataManagement = () => {
             ),
           },
         ]}
-        data={wards}
-        emptyMessage={loadingWards ? "Đang tải dữ liệu..." : "Chưa có dữ liệu. Hãy thêm phường/xã mới."}
+        data={wards || []}
+        emptyMessage={
+          loadingWards ? 'Đang tải dữ liệu...' : 'Chưa có dữ liệu. Hãy thêm phường/xã mới.'
+        }
       />
 
       {/* Upload/Edit Modal */}
@@ -511,63 +540,81 @@ const WardDataManagement = () => {
           setIsEditModalOpen(false);
           setEditingWard(null);
           setFormData({
-            ward_id: "",
-            name: "",
+            ward_code: '',
+            ward_name: '',
+            district: '',
+            province: '',
             area: 0,
             population: 0,
-            coordinates: "",
+            coordinates: '',
+            description: '',
           });
         }}
-        title={editingWard ? "Chỉnh sửa Phường/Xã" : "Thêm Phường/Xã mới"}
+        title={editingWard ? 'Chỉnh sửa Phường/Xã' : 'Thêm Phường/Xã mới'}
         footer={
           <>
             <Button
-              variant="secondary"
-              type="button"
+              variant='secondary'
+              type='button'
               onClick={() => {
                 setIsUploadModalOpen(false);
                 setIsEditModalOpen(false);
                 setEditingWard(null);
                 setFormData({
-                  ward_id: "",
-                  name: "",
+                  ward_code: '',
+                  ward_name: '',
+                  district: '',
+                  province: '',
                   area: 0,
                   population: 0,
-                  coordinates: "",
+                  coordinates: '',
+                  description: '',
                 });
               }}
             >
               Hủy
             </Button>
             <Button
-              variant="primary"
-              type="submit"
+              variant='primary'
+              type='submit'
               onClick={(e) => {
                 e.preventDefault();
                 handleSubmit(e as any);
               }}
             >
-              {editingWard ? "Cập nhật" : "Thêm mới"}
+              {editingWard ? 'Cập nhật' : 'Thêm mới'}
             </Button>
           </>
         }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className='space-y-4'>
           <Input
-            label="Tên phường/xã *"
-            type="text"
+            label='Tên phường/xã *'
+            type='text'
             required
-            value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
+            value={formData.ward_name}
+            onChange={(e) => setFormData({ ...formData, ward_name: e.target.value })}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <Input
+            label='Quận/Huyện *'
+            type='text'
+            required
+            value={formData.district}
+            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+          />
+          <Input
+            label='Tỉnh/Thành phố *'
+            type='text'
+            required
+            value={formData.province}
+            onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+          />
+          <div className='grid grid-cols-2 gap-4'>
             <Input
-              label="Diện tích (km²) *"
-              type="number"
+              label='Diện tích (km²) *'
+              type='number'
               required
-              step="0.01"
+              step='0.01'
               value={formData.area}
               onChange={(e) =>
                 setFormData({
@@ -577,8 +624,8 @@ const WardDataManagement = () => {
               }
             />
             <Input
-              label="Dân số *"
-              type="number"
+              label='Dân số *'
+              type='number'
               required
               value={formData.population}
               onChange={(e) =>
@@ -590,15 +637,20 @@ const WardDataManagement = () => {
             />
           </div>
           <Textarea
-            label="Tọa độ (JSON hoặc WKT) *"
+            label='Tọa độ (latitude,longitude) *'
             required
             value={formData.coordinates}
-            onChange={(e) =>
-              setFormData({ ...formData, coordinates: e.target.value })
-            }
-            rows={3}
-            placeholder='{"type": "Polygon", "coordinates": [...]}'
-            className="font-mono text-sm"
+            onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
+            rows={2}
+            placeholder='10.7769,106.7009'
+            className='font-mono text-sm'
+          />
+          <Textarea
+            label='Mô tả'
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={2}
+            placeholder='Mô tả về phường/xã...'
           />
         </form>
       </Modal>
@@ -607,4 +659,3 @@ const WardDataManagement = () => {
 };
 
 export default WardDataManagement;
-

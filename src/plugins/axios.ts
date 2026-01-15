@@ -29,6 +29,7 @@ const axiosRequestInterceptor = () => {
         '/weather',
         '/weather/latest',
         '/weather/ward/',
+        '/weather/bulk-import',
         '/weather/stats/',
         '/drainage',
         '/risk',
