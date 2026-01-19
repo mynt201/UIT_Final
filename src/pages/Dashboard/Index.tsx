@@ -108,7 +108,7 @@ const Index = () => {
         : 0;
 
     return {
-      totalWards: wardStats.length,
+      totalWards: wardStats?.length || 0,
       highRisk,
       mediumRisk,
       lowRisk,

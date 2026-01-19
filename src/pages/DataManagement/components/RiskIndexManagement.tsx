@@ -15,7 +15,6 @@ import { Table, Input, Modal, Button } from '../../../components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { api } from '../../../plugins/axios';
-import { api } from '../../../plugins/axios';
 import type { RiskIndexData } from '../../../types/dataManagement';
 
 interface UploadResult {

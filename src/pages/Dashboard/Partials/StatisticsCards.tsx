@@ -15,6 +15,19 @@ interface StatisticsCardsProps {
 export default function StatisticsCards({
   statistics,
 }: StatisticsCardsProps) {
+  // Provide default values if statistics is undefined
+  const safeStats = statistics || {
+    totalWards: 0,
+    highRisk: 0,
+    mediumRisk: 0,
+    lowRisk: 0,
+    avgRisk: 0,
+    maxRisk: 0,
+    totalPopulation: 0,
+    avgRainfall: 0,
+    avgElevation: 0,
+    avgDrainage: 0,
+  };
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -32,7 +45,7 @@ export default function StatisticsCards({
           </span>
         </div>
         <div className={`text-3xl font-bold mb-1 ${themeClasses.text}`}>
-          {statistics.totalWards}
+          {safeStats.totalWards}
         </div>
         <div className={`text-sm ${themeClasses.textSecondary}`}>
           Khu vực được giám sát
@@ -51,10 +64,10 @@ export default function StatisticsCards({
           </span>
         </div>
         <div className="text-3xl font-bold text-red-400 mb-1">
-          {statistics.highRisk}
+          {safeStats.highRisk}
         </div>
         <div className={`text-sm ${themeClasses.textSecondary}`}>
-          {((statistics.highRisk / statistics.totalWards) * 100).toFixed(1)}%
+          {((safeStats.highRisk / safeStats.totalWards) * 100 || 0).toFixed(1)}%
           tổng số
         </div>
       </div>
@@ -71,7 +84,7 @@ export default function StatisticsCards({
           </span>
         </div>
         <div className="text-3xl font-bold text-orange-400 mb-1">
-          {statistics.avgRisk.toFixed(2)}
+          {safeStats.avgRisk.toFixed(2)}
         </div>
         <div className={`text-sm ${themeClasses.textSecondary}`}>
           Rủi ro trung bình
