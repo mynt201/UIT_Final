@@ -40,10 +40,10 @@ export default function AdminSidebar() {
   const getActiveClass = (path: string) => {
     return isActive(path)
       ? theme === 'light'
-        ? 'bg-indigo-600 text-white'
-        : 'bg-indigo-500 text-white'
-      : `${themeClasses.textSecondary} ${
-          theme === 'light' ? 'hover:bg-gray-200' : 'hover:bg-gray-700'
+        ? 'bg-indigo-600 text-white font-medium'
+        : 'bg-indigo-600 text-white font-medium'
+      : `${themeClasses.text} ${
+          theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'
         }`;
   };
 
@@ -161,11 +161,11 @@ export default function AdminSidebar() {
         <button
           onClick={handleLogout}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            themeClasses.textSecondary
+            themeClasses.text
           } ${
             theme === 'light'
-              ? 'hover:bg-red-100 hover:text-red-600'
-              : 'hover:bg-red-600 hover:text-white'
+              ? 'hover:bg-red-50 hover:text-red-600'
+              : 'hover:bg-red-900/30 hover:text-red-400'
           }`}
         >
           <FaSignOutAlt size={20} />

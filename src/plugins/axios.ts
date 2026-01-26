@@ -7,7 +7,7 @@ declare module 'axios' {
 }
 
 const axiosCreateConfig = {
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
   timeout: 600000, // Timeout after 10 minute (600 seconds)
   headers: {
     Accept: 'application/json',
@@ -17,11 +17,11 @@ const axiosCreateConfig = {
 const axiosRequestInterceptor = () => {
   const onFulfilled = (config: AxiosRequestConfig) => {
     try {
-      // Skip adding auth header for public endpoints (role user can access without token)
+      // Skip adding auth header for public endpoints (only GET requests)
       const skipAuthEndpoints = [
         '/users/login',
         '/users/register',
-        // Public read-only APIs for role user
+        // Public read-only APIs for role user (GET only)
         '/wards',
         '/wards/stats',
         '/wards/risk/',
@@ -29,14 +29,15 @@ const axiosRequestInterceptor = () => {
         '/weather',
         '/weather/latest',
         '/weather/ward/',
-        '/weather/bulk-import',
         '/weather/stats/',
         '/drainage',
         '/risk',
         '/road-bridge',
       ];
 
-      const shouldSkipAuth = skipAuthEndpoints.some((endpoint) => config.url?.includes(endpoint));
+      // Only skip auth for GET requests to public endpoints
+      const isGetRequest = config.method?.toLowerCase() === 'get';
+      const shouldSkipAuth = isGetRequest && skipAuthEndpoints.some((endpoint) => config.url?.includes(endpoint));
 
       if (!shouldSkipAuth) {
         const token = localStorage.getItem('authToken');
@@ -52,7 +53,7 @@ const axiosRequestInterceptor = () => {
   };
   const onRejected = (error: AxiosError) => {
     console.error('Request error:', error);
-    return Promise.reject(error.response);
+    return Promise.reject(error);
   };
   return { onFulfilled, onRejected };
 };
@@ -73,7 +74,10 @@ const axiosResponseInterceptor = () => {
         window.location.href = '/login';
       }
     }
-    return Promise.reject(error.response);
+    
+    // Return error with response data for better error handling
+    const errorWithData = error.response?.data || { error: error.message || 'Network error' };
+    return Promise.reject({ ...error, response: { ...error.response, data: errorWithData } });
   };
 
   return { onFulfilled, onRejected };

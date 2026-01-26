@@ -1,11 +1,29 @@
 import { useMemo } from 'react';
-import { FaCloudRain, FaExclamationTriangle, FaChartLine } from 'react-icons/fa';
+import { FaCloudRain, FaExclamationTriangle, FaChartLine, FaSpinner } from 'react-icons/fa';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 import { mockWards } from '../../../mockData';
 import { calcFloodRiskIndex, getRiskLevel } from '../../PageView/Partials/floodRiskUtils';
 import { Select, Table } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
 import type { DailyStatisticsProps } from '../../../types';
+import type { WeatherData, RiskIndexData } from '../../../types/dataManagement';
+import { useDailyStatistics } from '../../../hooks/useStatistics';
+
+// Extended types for API responses
+type WeatherDataWithDates = WeatherData & {
+  recorded_at?: string;
+};
+
+type RiskIndexDataWithCategory = RiskIndexData & {
+  createdAt?: string;
+  risk_category?: string;
+};
 
 const DailyStatistics = ({
   selectedYear,
@@ -13,72 +31,139 @@ const DailyStatistics = ({
   onYearChange,
   onMonthChange,
 }: DailyStatisticsProps) => {
-  // Generate mock daily data for the selected month
+  const { data: apiData, isLoading } = useDailyStatistics(selectedYear, selectedMonth);
+
+  // Generate daily data from API or fallback to mock
   const dailyData = useMemo(() => {
-    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const daysInMonth = dayjs(`${selectedYear}-${selectedMonth}`).daysInMonth();
     const data = [];
 
-    // Simple seeded random function for consistent mock data
-    const seededRandom = (seed: number) => {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    };
+    // If API data is available, process it
+    if (apiData && apiData.weatherData && apiData.riskData) {
+      const weatherByDate = new Map<string, WeatherDataWithDates[]>();
+      const riskByDate = new Map<string, RiskIndexDataWithCategory[]>();
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(selectedYear, selectedMonth - 1, day);
-      const dateStr = date.toISOString().split('T')[0];
-      const seed = date.getTime();
-
-      // Mock data with seeded random for consistency
-      const avgRainfall = 100 + seededRandom(seed) * 150;
-      const avgWaterLevel = 1.5 + seededRandom(seed + 1) * 2;
-      const highRiskCount = Math.floor(seededRandom(seed + 2) * 5) + 3;
-      const mediumRiskCount = Math.floor(seededRandom(seed + 3) * 7) + 4;
-      const lowRiskCount = mockWards.length - highRiskCount - mediumRiskCount;
-
-      const wardStats = mockWards.map((ward) => {
-        const exposure = ward.population_density / 1000 + avgRainfall / 200;
-        const susceptibility = ward.low_elevation + ward.urban_land;
-        const resilience = ward.drainage_capacity || 1;
-        const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
-        const riskLevel = getRiskLevel(floodRisk);
-        return {
-          ward_name: ward.ward_name,
-          flood_risk: floodRisk,
-          risk_level: riskLevel,
-        };
+      // Group weather data by date
+      apiData.weatherData.forEach((weather: WeatherDataWithDates) => {
+        const date = dayjs(weather.date || weather.recorded_at || '').format('YYYY-MM-DD');
+        if (!weatherByDate.has(date)) {
+          weatherByDate.set(date, []);
+        }
+        weatherByDate.get(date)!.push(weather);
       });
 
-      const avgRisk = wardStats.reduce((sum, w) => sum + w.flood_risk, 0) / wardStats.length;
-
-      data.push({
-        date: dateStr,
-        day: day,
-        avgRainfall: Math.round(avgRainfall),
-        avgWaterLevel: parseFloat(avgWaterLevel.toFixed(2)),
-        avgRisk: parseFloat(avgRisk.toFixed(2)),
-        highRisk: highRiskCount,
-        mediumRisk: mediumRiskCount,
-        lowRisk: lowRiskCount,
+      // Group risk data by date
+      apiData.riskData.forEach((risk: RiskIndexDataWithCategory) => {
+        const date = dayjs(risk.date || risk.createdAt || '').format('YYYY-MM-DD');
+        if (!riskByDate.has(date)) {
+          riskByDate.set(date, []);
+        }
+        riskByDate.get(date)!.push(risk);
       });
+
+      // Process each day
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = dayjs(`${selectedYear}-${selectedMonth}-${day}`);
+        const dateStr = date.format('YYYY-MM-DD');
+
+        const dayWeather = weatherByDate.get(dateStr) || [];
+        const dayRisk = riskByDate.get(dateStr) || [];
+
+        // Calculate averages
+        const avgRainfall =
+          dayWeather.length > 0
+            ? dayWeather.reduce((sum: number, w: WeatherDataWithDates) => sum + (w.rainfall || 0), 0) / dayWeather.length
+            : 0;
+
+        const avgRisk =
+          dayRisk.length > 0
+            ? dayRisk.reduce((sum: number, r: RiskIndexDataWithCategory) => sum + (r.risk_index || 0), 0) / dayRisk.length
+            : 0;
+
+        // Count risk levels
+        const highRiskCount = dayRisk.filter(
+          (r: RiskIndexDataWithCategory) => r.risk_category === 'High' || r.risk_category === 'Cao'
+        ).length;
+        const mediumRiskCount = dayRisk.filter(
+          (r: RiskIndexDataWithCategory) => r.risk_category === 'Medium' || r.risk_category === 'Trung Bình'
+        ).length;
+        const lowRiskCount = dayRisk.filter(
+          (r: RiskIndexDataWithCategory) => r.risk_category === 'Low' || r.risk_category === 'Thấp'
+        ).length;
+
+        data.push({
+          date: dateStr,
+          day: day,
+          avgRainfall: Math.round(avgRainfall),
+          avgWaterLevel: 0, // Not available in API
+          avgRisk: parseFloat(avgRisk.toFixed(2)),
+          highRisk: highRiskCount,
+          mediumRisk: mediumRiskCount,
+          lowRisk: lowRiskCount,
+        });
+      }
+    } else {
+      // Fallback to mock data
+      const seededRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = dayjs(`${selectedYear}-${selectedMonth}-${day}`);
+        const dateStr = date.format('YYYY-MM-DD');
+        const seed = date.valueOf();
+
+        const avgRainfall = 100 + seededRandom(seed) * 150;
+        const avgWaterLevel = 1.5 + seededRandom(seed + 1) * 2;
+        const highRiskCount = Math.floor(seededRandom(seed + 2) * 5) + 3;
+        const mediumRiskCount = Math.floor(seededRandom(seed + 3) * 7) + 4;
+        const lowRiskCount = mockWards.length - highRiskCount - mediumRiskCount;
+
+        const wardStats = mockWards.map((ward) => {
+          const exposure = ward.population_density / 1000 + avgRainfall / 200;
+          const susceptibility = ward.low_elevation + ward.urban_land;
+          const resilience = ward.drainage_capacity || 1;
+          const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+          const riskLevel = getRiskLevel(floodRisk);
+          return {
+            ward_name: ward.ward_name,
+            flood_risk: floodRisk,
+            risk_level: riskLevel,
+          };
+        });
+
+        const avgRisk = wardStats.reduce((sum, w) => sum + w.flood_risk, 0) / wardStats.length;
+
+        data.push({
+          date: dateStr,
+          day: day,
+          avgRainfall: Math.round(avgRainfall),
+          avgWaterLevel: parseFloat(avgWaterLevel.toFixed(2)),
+          avgRisk: parseFloat(avgRisk.toFixed(2)),
+          highRisk: highRiskCount,
+          mediumRisk: mediumRiskCount,
+          lowRisk: lowRiskCount,
+        });
+      }
     }
 
     return data;
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, apiData]);
 
   const maxRainfall = Math.max(...dailyData.map((d) => d.avgRainfall));
   const maxRisk = Math.max(...dailyData.map((d) => d.avgRisk));
 
   // Format date function
-  const formatDate = (date: Date) => {
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const dayOfWeek = date.getDay();
+  const formatDate = (date: dayjs.Dayjs) => {
+    const day = date.date();
+    const month = date.month() + 1;
+    const dayOfWeek = date.day();
     const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
     return `${day}/${month} (${dayNames[dayOfWeek]})`;
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const years = Array.from({ length: 5 }, (_, i) => dayjs().year() - i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const monthNames = [
     'Tháng 1',
@@ -97,6 +182,15 @@ const DailyStatistics = ({
 
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+
+  if (isLoading) {
+    return (
+      <div className={`flex flex-col items-center justify-center py-12 gap-3 ${themeClasses.text}`}>
+        <FaSpinner className="animate-spin text-4xl text-blue-500" />
+        <p className="text-lg">Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>
@@ -193,7 +287,7 @@ const DailyStatistics = ({
           <h3 className='text-lg font-semibold ${themeClasses.text} mb-4'>Lượng mưa theo ngày</h3>
           <div className='space-y-2'>
             {dailyData.map((data) => {
-              const date = new Date(selectedYear, selectedMonth - 1, data.day);
+              const date = dayjs(`${selectedYear}-${selectedMonth}-${data.day}`);
               return (
                 <div key={data.date} className='space-y-1'>
                   <div className='flex justify-between text-sm'>
@@ -224,7 +318,7 @@ const DailyStatistics = ({
           </h3>
           <div className='space-y-2'>
             {dailyData.map((data) => {
-              const date = new Date(selectedYear, selectedMonth - 1, data.day);
+              const date = dayjs(`${selectedYear}-${selectedMonth}-${data.day}`);
               const riskColor =
                 data.avgRisk >= 3.5
                   ? 'bg-red-500'
@@ -265,7 +359,7 @@ const DailyStatistics = ({
               header: 'Ngày',
               accessor: 'day',
               render: (_, row) =>
-                formatDate(new Date(selectedYear, selectedMonth - 1, row.day)),
+                formatDate(dayjs(`${selectedYear}-${selectedMonth}-${row.day}`)),
             },
             {
               header: 'Rủi ro Cao',

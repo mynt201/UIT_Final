@@ -84,7 +84,7 @@ export default function WardsTable({
             accessor: "population_density",
             render: (value) => (
               <span className={themeClasses.text}>
-                {formatNumber(value)} người/km²
+                {formatNumber(value as number)} người/km²
               </span>
             ),
           },

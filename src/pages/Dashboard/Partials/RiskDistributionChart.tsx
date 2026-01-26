@@ -11,11 +11,51 @@ import {
 } from "recharts";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
-import type { RiskDistributionItem } from "../../../types";
+import type { 
+  RiskDistributionItem, 
+  TooltipProps, 
+  PieChartData, 
+  BarChartData 
+} from "../../../types";
 
 interface RiskDistributionChartProps {
   riskDistribution: RiskDistributionItem[];
   totalWards: number;
+}
+
+// CustomTooltip component defined outside to avoid recreation during render
+function CustomTooltip({ active, payload }: TooltipProps) {
+  const { theme } = useTheme();
+  const themeClasses = getThemeClasses(theme);
+
+  if (active && payload && payload.length > 0) {
+    const firstPayload = payload[0];
+    const percentage = firstPayload.payload?.percentage;
+    
+    return (
+      <div
+        className={`${
+          theme === "light" ? "bg-white" : "bg-gray-800"
+        } border ${themeClasses.border} rounded-lg p-3 shadow-lg`}
+      >
+        <p className={`font-semibold ${themeClasses.text}`}>
+          {firstPayload.name}
+        </p>
+        <p className={`${themeClasses.textSecondary}`}>
+          Số lượng: <span className="font-bold">{firstPayload.value}</span>
+        </p>
+        {percentage !== undefined && (
+          <p className={`${themeClasses.textSecondary}`}>
+            Tỷ lệ:{" "}
+            <span className="font-bold">
+              {typeof percentage === 'number' ? percentage.toFixed(1) : '0.0'}%
+            </span>
+          </p>
+        )}
+      </div>
+    );
+  }
+  return null;
 }
 
 export default function RiskDistributionChart({
@@ -32,7 +72,7 @@ export default function RiskDistributionChart({
   };
 
   // Prepare data for Pie Chart
-  const pieData = riskDistribution.map((item) => ({
+  const pieData: PieChartData[] = riskDistribution.map((item) => ({
     name: item.label,
     value: item.count,
     color: colorMap[item.label] || "#gray",
@@ -40,38 +80,12 @@ export default function RiskDistributionChart({
   }));
 
   // Prepare data for Bar Chart
-  const barData = riskDistribution.map((item) => ({
+  const barData: BarChartData[] = riskDistribution.map((item) => ({
     name: item.label,
     value: item.count,
     percentage: item.percentage,
     fill: colorMap[item.label] || "#gray",
   }));
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          className={`${
-            theme === "light" ? "bg-white" : "bg-gray-800"
-          } border ${themeClasses.border} rounded-lg p-3 shadow-lg`}
-        >
-          <p className={`font-semibold ${themeClasses.text}`}>
-            {payload[0].name}
-          </p>
-          <p className={`${themeClasses.textSecondary}`}>
-            Số lượng: <span className="font-bold">{payload[0].value}</span>
-          </p>
-          <p className={`${themeClasses.textSecondary}`}>
-            Tỷ lệ:{" "}
-            <span className="font-bold">
-              {payload[0].payload.percentage?.toFixed(1)}%
-            </span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

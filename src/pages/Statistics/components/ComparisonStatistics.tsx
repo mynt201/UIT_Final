@@ -5,12 +5,21 @@ import {
   FaExclamationTriangle,
   FaArrowUp,
   FaArrowDown,
+  FaSpinner,
 } from 'react-icons/fa';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 import type { ComparisonStatisticsProps } from '../../../types';
+import type { WeatherData, RiskIndexData } from '../../../types/dataManagement';
 import { Input, Table } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
+import { useComparisonStatistics } from '../../../hooks/useStatistics';
 
 const ComparisonStatistics = ({
   startDate,
@@ -18,75 +27,168 @@ const ComparisonStatistics = ({
   onStartDateChange,
   onEndDateChange,
 }: ComparisonStatisticsProps) => {
+  const { data: apiData, isLoading } = useComparisonStatistics(startDate, endDate);
+
   const comparisonData = useMemo(() => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const diffDays = end.diff(start, 'day') + 1;
 
-    // Generate mock data for period 1 (first half)
+    // Split into two periods
     const period1Start = start;
-    const period1End = new Date(start.getTime() + diffTime / 2);
-    const period2Start = new Date(period1End.getTime() + 1);
+    const period1End = start.add(Math.floor(diffDays / 2) - 1, 'day').endOf('day');
+    const period2Start = period1End.add(1, 'day').startOf('day');
     const period2End = end;
-
-    // Simple seeded random function for consistent mock data
-    const seededRandom = (seed: number) => {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    };
-
-    // Use dates as seeds for consistent results
-    const period1Seed = start.getTime();
-    const period2Seed = period2Start.getTime();
-
-    // Mock calculations with seeded random
-    const period1Data = {
-      avgRainfall: 120 + seededRandom(period1Seed) * 80,
-      avgRisk: 2.5 + seededRandom(period1Seed + 1) * 1.5,
-      highRiskDays: Math.floor((diffDays / 2) * 0.3),
-      totalDays: Math.floor(diffDays / 2),
-      maxRisk: 3.5 + seededRandom(period1Seed + 2) * 1.5,
-      minRisk: 1.5 + seededRandom(period1Seed + 3) * 0.5,
-    };
-
-    const period2Data = {
-      avgRainfall: 100 + seededRandom(period2Seed) * 100,
-      avgRisk: 2.0 + seededRandom(period2Seed + 1) * 2.0,
-      highRiskDays: Math.floor((diffDays / 2) * 0.25),
-      totalDays: Math.ceil(diffDays / 2),
-      maxRisk: 3.0 + seededRandom(period2Seed + 2) * 2.0,
-      minRisk: 1.0 + seededRandom(period2Seed + 3) * 1.0,
-    };
 
     const calculateChange = (current: number, previous: number) => {
       if (previous === 0) return 0;
       return ((current - previous) / previous) * 100;
     };
 
-    return {
-      period1: {
-        ...period1Data,
-        label: `Giai đoạn 1 (${period1Start.toLocaleDateString(
-          'vi-VN'
-        )} - ${period1End.toLocaleDateString('vi-VN')})`,
-      },
-      period2: {
-        ...period2Data,
-        label: `Giai đoạn 2 (${period2Start.toLocaleDateString(
-          'vi-VN'
-        )} - ${period2End.toLocaleDateString('vi-VN')})`,
-      },
-      changes: {
-        rainfall: calculateChange(period2Data.avgRainfall, period1Data.avgRainfall),
-        risk: calculateChange(period2Data.avgRisk, period1Data.avgRisk),
-        highRiskDays: calculateChange(period2Data.highRiskDays, period1Data.highRiskDays),
-      },
-    };
-  }, [startDate, endDate]);
+    // If API data is available, process it
+    if (apiData && apiData.weatherData && apiData.riskData) {
+      // Filter data for period 1
+      const period1Weather = apiData.weatherData.filter((w: WeatherData & { recorded_at?: string }) => {
+        const date = dayjs(w.date || w.recorded_at || '');
+        return date.isValid() && date.isSameOrAfter(period1Start) && date.isSameOrBefore(period1End);
+      });
+
+      const period1Risk = apiData.riskData.filter((r: RiskIndexData & { createdAt?: string; risk_category?: string }) => {
+        const date = dayjs(r.date || r.createdAt || '');
+        return date.isValid() && date.isSameOrAfter(period1Start) && date.isSameOrBefore(period1End);
+      });
+
+      // Filter data for period 2
+      const period2Weather = apiData.weatherData.filter((w: WeatherData & { recorded_at?: string }) => {
+        const date = dayjs(w.date || w.recorded_at || '');
+        return date.isValid() && date.isSameOrAfter(period2Start) && date.isSameOrBefore(period2End);
+      });
+
+      const period2Risk = apiData.riskData.filter((r: RiskIndexData & { createdAt?: string; risk_category?: string }) => {
+        const date = dayjs(r.date || r.createdAt || '');
+        return date.isValid() && date.isSameOrAfter(period2Start) && date.isSameOrBefore(period2End);
+      });
+
+      // Calculate period 1 statistics
+      const period1AvgRainfall =
+        period1Weather.length > 0
+          ? period1Weather.reduce((sum: number, w: WeatherData) => sum + (w.rainfall || 0), 0) / period1Weather.length
+          : 0;
+
+      const period1AvgRisk =
+        period1Risk.length > 0
+          ? period1Risk.reduce((sum: number, r: RiskIndexData) => sum + (r.risk_index || 0), 0) / period1Risk.length
+          : 0;
+
+      const period1HighRiskDays = period1Risk.filter(
+        (r: RiskIndexData & { risk_category?: string }) => r.risk_category === 'High' || r.risk_category === 'Cao'
+      ).length;
+
+      const period1RiskValues = period1Risk.map((r: RiskIndexData) => r.risk_index || 0).filter((v: number) => v > 0);
+      const period1MaxRisk = period1RiskValues.length > 0 ? Math.max(...period1RiskValues) : 0;
+      const period1MinRisk = period1RiskValues.length > 0 ? Math.min(...period1RiskValues) : 0;
+
+      // Calculate period 2 statistics
+      const period2AvgRainfall =
+        period2Weather.length > 0
+          ? period2Weather.reduce((sum: number, w: WeatherData) => sum + (w.rainfall || 0), 0) / period2Weather.length
+          : 0;
+
+      const period2AvgRisk =
+        period2Risk.length > 0
+          ? period2Risk.reduce((sum: number, r: RiskIndexData) => sum + (r.risk_index || 0), 0) / period2Risk.length
+          : 0;
+
+      const period2HighRiskDays = period2Risk.filter(
+        (r: RiskIndexData & { risk_category?: string }) => r.risk_category === 'High' || r.risk_category === 'Cao'
+      ).length;
+
+      const period2RiskValues = period2Risk.map((r: RiskIndexData) => r.risk_index || 0).filter((v: number) => v > 0);
+      const period2MaxRisk = period2RiskValues.length > 0 ? Math.max(...period2RiskValues) : 0;
+      const period2MinRisk = period2RiskValues.length > 0 ? Math.min(...period2RiskValues) : 0;
+
+      return {
+        period1: {
+          avgRainfall: period1AvgRainfall,
+          avgRisk: parseFloat(period1AvgRisk.toFixed(2)),
+          highRiskDays: period1HighRiskDays,
+          totalDays: Math.floor(diffDays / 2),
+          maxRisk: parseFloat(period1MaxRisk.toFixed(2)),
+          minRisk: parseFloat(period1MinRisk.toFixed(2)),
+          label: `Giai đoạn 1 (${period1Start.format('DD/MM/YYYY')} - ${period1End.format('DD/MM/YYYY')})`,
+        },
+        period2: {
+          avgRainfall: period2AvgRainfall,
+          avgRisk: parseFloat(period2AvgRisk.toFixed(2)),
+          highRiskDays: period2HighRiskDays,
+          totalDays: Math.ceil(diffDays / 2),
+          maxRisk: parseFloat(period2MaxRisk.toFixed(2)),
+          minRisk: parseFloat(period2MinRisk.toFixed(2)),
+          label: `Giai đoạn 2 (${period2Start.format('DD/MM/YYYY')} - ${period2End.format('DD/MM/YYYY')})`,
+        },
+        changes: {
+          rainfall: calculateChange(period2AvgRainfall, period1AvgRainfall),
+          risk: calculateChange(period2AvgRisk, period1AvgRisk),
+          highRiskDays: calculateChange(period2HighRiskDays, period1HighRiskDays),
+        },
+      };
+    } else {
+      // Fallback to mock data
+      const seededRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+
+      const period1Seed = start.valueOf();
+      const period2Seed = period2Start.valueOf();
+
+      const period1Data = {
+        avgRainfall: 120 + seededRandom(period1Seed) * 80,
+        avgRisk: 2.5 + seededRandom(period1Seed + 1) * 1.5,
+        highRiskDays: Math.floor((diffDays / 2) * 0.3),
+        totalDays: Math.floor(diffDays / 2),
+        maxRisk: 3.5 + seededRandom(period1Seed + 2) * 1.5,
+        minRisk: 1.5 + seededRandom(period1Seed + 3) * 0.5,
+      };
+
+      const period2Data = {
+        avgRainfall: 100 + seededRandom(period2Seed) * 100,
+        avgRisk: 2.0 + seededRandom(period2Seed + 1) * 2.0,
+        highRiskDays: Math.floor((diffDays / 2) * 0.25),
+        totalDays: Math.ceil(diffDays / 2),
+        maxRisk: 3.0 + seededRandom(period2Seed + 2) * 2.0,
+        minRisk: 1.0 + seededRandom(period2Seed + 3) * 1.0,
+      };
+
+      return {
+        period1: {
+          ...period1Data,
+          label: `Giai đoạn 1 (${period1Start.format('DD/MM/YYYY')} - ${period1End.format('DD/MM/YYYY')})`,
+        },
+        period2: {
+          ...period2Data,
+          label: `Giai đoạn 2 (${period2Start.format('DD/MM/YYYY')} - ${period2End.format('DD/MM/YYYY')})`,
+        },
+        changes: {
+          rainfall: calculateChange(period2Data.avgRainfall, period1Data.avgRainfall),
+          risk: calculateChange(period2Data.avgRisk, period1Data.avgRisk),
+          highRiskDays: calculateChange(period2Data.highRiskDays, period1Data.highRiskDays),
+        },
+      };
+    }
+  }, [startDate, endDate, apiData]);
 
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+
+  if (isLoading) {
+    return (
+      <div className={`flex flex-col items-center justify-center py-12 gap-3 ${themeClasses.text}`}>
+        <FaSpinner className="animate-spin text-4xl text-blue-500" />
+        <p className="text-lg">Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>

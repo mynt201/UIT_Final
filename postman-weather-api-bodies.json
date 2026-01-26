@@ -1,0 +1,347 @@
+{
+    "weather_api_request_bodies": {
+        "getWeatherData": {
+            "description": "Lấy danh sách dữ liệu thời tiết",
+            "method": "GET",
+            "url": "http://localhost:5000/api/weather?page=1&limit=10&ward_id=WARD_ID&date_from=2024-01-01&date_to=2024-12-31&sort=date&order=desc",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWeatherById": {
+            "description": "Lấy dữ liệu thời tiết theo ID",
+            "method": "GET",
+            "url": "http://localhost:5000/api/weather/WEATHER_ID",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "createWeatherData": {
+            "description": "Tạo dữ liệu thời tiết mới (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/weather",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "ward_id": "WARD_OBJECT_ID",
+                "date": "2024-01-15T10:00:00.000Z",
+                "temperature": {
+                    "current": 28.5,
+                    "min": 24.0,
+                    "max": 32.0
+                },
+                "humidity": 75.5,
+                "rainfall": 5.2,
+                "wind_speed": 12.5,
+                "wind_direction": 180,
+                "pressure": 1013.2,
+                "is_forecast": false
+            }
+        },
+
+        "updateWeatherData": {
+            "description": "Cập nhật dữ liệu thời tiết (Admin only)",
+            "method": "PUT",
+            "url": "http://localhost:5000/api/weather/WEATHER_ID",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "temperature": {
+                    "current": 29.0,
+                    "min": 25.0,
+                    "max": 33.0
+                },
+                "humidity": 80.0,
+                "rainfall": 8.5,
+                "wind_speed": 15.0
+            }
+        },
+
+        "deleteWeatherData": {
+            "description": "Xóa dữ liệu thời tiết (Admin only)",
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/weather/WEATHER_ID",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWeatherByWard": {
+            "description": "Lấy dữ liệu thời tiết theo phường/xã",
+            "method": "GET",
+            "url": "http://localhost:5000/api/weather/ward/WARD_ID?page=1&limit=10&date_from=2024-01-01&date_to=2024-12-31",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getLatestWeather": {
+            "description": "Lấy dữ liệu thời tiết mới nhất cho tất cả phường/xã",
+            "method": "GET",
+            "url": "http://localhost:5000/api/weather/latest",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWeatherStats": {
+            "description": "Lấy thống kê thời tiết cho một phường/xã",
+            "method": "GET",
+            "url": "http://localhost:5000/api/weather/stats/WARD_ID?days=30",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "bulkImportWeather": {
+            "description": "Import hàng loạt dữ liệu thời tiết (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/weather/bulk-import",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "weatherData": [{
+                        "ward_id": "WARD_OBJECT_ID_1",
+                        "date": "2024-01-15T06:00:00.000Z",
+                        "temperature": {
+                            "current": 26.0,
+                            "min": 23.0,
+                            "max": 29.0
+                        },
+                        "humidity": 85.0,
+                        "rainfall": 2.5,
+                        "wind_speed": 8.0,
+                        "wind_direction": 135,
+                        "pressure": 1012.5,
+                        "is_forecast": false
+                    },
+                    {
+                        "ward_id": "WARD_OBJECT_ID_2",
+                        "date": "2024-01-15T06:00:00.000Z",
+                        "temperature": {
+                            "current": 27.5,
+                            "min": 24.5,
+                            "max": 30.5
+                        },
+                        "humidity": 78.0,
+                        "rainfall": 1.8,
+                        "wind_speed": 10.5,
+                        "wind_direction": 160,
+                        "pressure": 1014.0,
+                        "is_forecast": false
+                    }
+                ]
+            }
+        }
+    },
+
+    "sample_weather_data_formats": {
+        "basic_weather_record": {
+            "ward_id": "ObjectId của phường/xã",
+            "date": "2024-01-15T10:00:00.000Z",
+            "temperature": {
+                "current": 28.5,
+                "min": 24.0,
+                "max": 32.0
+            },
+            "humidity": 75.5,
+            "rainfall": 5.2,
+            "wind_speed": 12.5,
+            "wind_direction": 180,
+            "pressure": 1013.2,
+            "is_forecast": false
+        },
+
+        "forecast_weather_record": {
+            "ward_id": "ObjectId của phường/xã",
+            "date": "2024-01-20T14:00:00.000Z",
+            "temperature": {
+                "current": 30.0,
+                "min": 26.0,
+                "max": 34.0
+            },
+            "humidity": 70.0,
+            "rainfall": 15.0,
+            "wind_speed": 18.0,
+            "wind_direction": 225,
+            "pressure": 1008.5,
+            "is_forecast": true
+        }
+    },
+
+    "query_parameters": {
+        "pagination": {
+            "page": "Số trang (mặc định: 1)",
+            "limit": "Số bản ghi mỗi trang (mặc định: 50, tối đa: 100)"
+        },
+        "filtering": {
+            "ward_id": "Lọc theo ID phường/xã",
+            "date_from": "Ngày bắt đầu (ISO 8601)",
+            "date_to": "Ngày kết thúc (ISO 8601)",
+            "is_forecast": "true/false - chỉ lấy dữ liệu dự báo hay thực tế"
+        },
+        "sorting": {
+            "sort": "Trường sắp xếp (date, temperature.current, rainfall, etc.)",
+            "order": "asc/desc (mặc định: desc)"
+        },
+        "statistics": {
+            "days": "Số ngày để tính thống kê (mặc định: 30)"
+        }
+    },
+
+    "response_examples": {
+        "getWeatherData_success": {
+            "success": true,
+            "weatherData": [{
+                "_id": "weather_id",
+                "ward_id": {
+                    "ward_name": "Phường 1",
+                    "district": "Quận 1"
+                },
+                "date": "2024-01-15T10:00:00.000Z",
+                "temperature": {
+                    "current": 28.5,
+                    "min": 24.0,
+                    "max": 32.0
+                },
+                "humidity": 75.5,
+                "rainfall": 5.2,
+                "wind_speed": 12.5,
+                "wind_direction": 180,
+                "pressure": 1013.2,
+                "is_forecast": false
+            }],
+            "pagination": {
+                "page": 1,
+                "limit": 10,
+                "total": 150,
+                "pages": 15
+            }
+        },
+
+        "createWeatherData_success": {
+            "success": true,
+            "message": "Weather data created successfully",
+            "weather": {
+                "_id": "new_weather_id",
+                "ward_id": "ward_id",
+                "date": "2024-01-15T10:00:00.000Z",
+                "temperature": {
+                    "current": 28.5,
+                    "min": 24.0,
+                    "max": 32.0
+                },
+                "humidity": 75.5,
+                "rainfall": 5.2,
+                "is_forecast": false
+            }
+        },
+
+        "bulkImportWeather_success": {
+            "success": true,
+            "message": "Bulk import completed. 8 successful, 1 failed, 1 duplicates",
+            "results": {
+                "successful": [{
+                    "id": "weather_id_1",
+                    "ward_name": "Phường 1",
+                    "date": "2024-01-15T06:00:00.000Z"
+                }],
+                "failed": [{
+                    "ward_id": "invalid_ward_id",
+                    "date": "2024-01-15T06:00:00.000Z",
+                    "error": "Ward not found"
+                }],
+                "duplicates": [{
+                    "ward_id": "existing_ward_id",
+                    "ward_name": "Phường 2",
+                    "date": "2024-01-14T06:00:00.000Z",
+                    "error": "Weather data for this ward and date already exists"
+                }]
+            }
+        },
+
+        "getWeatherStats_success": {
+            "success": true,
+            "ward": {
+                "_id": "ward_id",
+                "ward_name": "Phường 1",
+                "district": "Quận 1"
+            },
+            "period": {
+                "days": 30,
+                "startDate": "2023-12-16T08:00:00.000Z",
+                "endDate": "2024-01-15T08:00:00.000Z"
+            },
+            "statistics": {
+                "count": 30,
+                "avgTemperature": 27.8,
+                "maxTemperature": 32.0,
+                "minTemperature": 23.5,
+                "avgHumidity": 76.2,
+                "totalRainfall": 45.8,
+                "avgRainfall": 1.5,
+                "maxRainfall": 12.5,
+                "rainyDays": 12
+            }
+        }
+    },
+
+    "error_responses": {
+        "validation_error": {
+            "success": false,
+            "error": "Validation failed",
+            "details": [
+                "Temperature must be between -50°C and 60°C",
+                "Humidity must be between 0% and 100%"
+            ]
+        },
+
+        "duplicate_error": {
+            "success": false,
+            "error": "Weather data for this ward and date already exists"
+        },
+
+        "not_found_error": {
+            "success": false,
+            "error": "Weather data not found"
+        },
+
+        "invalid_ward_error": {
+            "success": false,
+            "error": "Invalid ward ID"
+        }
+    },
+
+    "data_constraints": {
+        "temperature": {
+            "current": "Số thực, -50°C đến 60°C",
+            "min": "Số thực, -50°C đến 60°C",
+            "max": "Số thực, -50°C đến 60°C"
+        },
+        "humidity": "Số thực, 0% đến 100%",
+        "rainfall": "Số thực không âm (mm)",
+        "wind_speed": "Số thực không âm (km/h)",
+        "wind_direction": "Số thực, 0° đến 360°",
+        "pressure": "Số thực, 800 hPa đến 1200 hPa",
+        "is_forecast": "Boolean - true: dự báo, false: thực tế"
+    },
+
+    "testing_guide": {
+        "step1": "Tạo dữ liệu phường/xã trước (ward data)",
+        "step2": "Test GET /api/weather để xem danh sách trống",
+        "step3": "Test POST /api/weather để tạo dữ liệu mẫu (cần admin token)",
+        "step4": "Test GET /api/weather với các filter khác nhau",
+        "step5": "Test GET /api/weather/stats/:wardId để xem thống kê",
+        "step6": "Test bulk import với nhiều bản ghi",
+        "step7": "Test update và delete operations"
+    }
+}

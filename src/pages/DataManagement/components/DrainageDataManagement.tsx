@@ -88,8 +88,22 @@ const DrainageDataManagement = () => {
   } = useQuery({
     queryKey: ['drainage'],
     queryFn: async () => {
-      const response = await api.get('/drainage');
-      return response.data.drainageData || [];
+      try {
+        const response = await api.get('/drainage');
+        let data = response.data.drainageData || [];
+
+        // Ensure each record has _id field
+        data = data.map((item: any, index: number) => ({
+          ...item,
+          _id: item._id || item.id || `drainage_${index}`,
+          id: item.id || item._id || `drainage_${index}`
+        }));
+
+        return data;
+      } catch (error) {
+        // Return empty array if API fails
+        return [];
+      }
     },
   });
 
@@ -116,9 +130,19 @@ const DrainageDataManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drainage'] });
       toast.success('Drainage data updated successfully');
+      setIsEditModalOpen(false);
+      setEditingData(null);
+      setFormData({
+        id: '',
+        ward_id: '',
+        name: '',
+        type: '',
+        condition: '',
+      });
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to update drainage data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to update drainage data';
+      toast.error(errorMessage);
     },
   });
 
@@ -131,8 +155,9 @@ const DrainageDataManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['drainage'] });
       toast.success('Drainage data deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete drainage data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to delete drainage data';
+      toast.error(errorMessage);
     },
   });
 
@@ -146,21 +171,17 @@ const DrainageDataManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Remove 'id' field from formData before sending to API
+    const { id, ...apiData } = formData;
+    
     if (editingData) {
-      await updateDrainageMutation.mutateAsync({ id: editingData.id, data: formData });
+      const recordId = (editingData as any)._id || editingData.id;
+      await updateDrainageMutation.mutateAsync({ id: recordId, data: apiData });
     } else {
-      await createDrainageMutation.mutateAsync(formData);
+      await createDrainageMutation.mutateAsync(apiData);
     }
-    setIsUploadModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditingData(null);
-    setFormData({
-      id: '',
-      ward_id: '',
-      name: '',
-      type: '',
-      condition: '',
-    });
+    // Reset will be handled in onSuccess callbacks
   };
 
   const handleEdit = (data: DrainageData) => {
@@ -477,13 +498,24 @@ const DrainageDataManagement = () => {
 
       <Table
         columns={[
-          { header: 'ID Phường', accessor: 'ward_id' },
+          { 
+            header: 'Phường/Xã', 
+            accessor: 'ward_id',
+            render: (value, row) => {
+              // If ward_id is populated, show ward_name
+              if (row.ward_id && typeof row.ward_id === 'object' && row.ward_id.ward_name) {
+                return row.ward_id.ward_name;
+              }
+              // Otherwise show ID
+              return value || '-';
+            }
+          },
           { header: 'Tên hệ thống', accessor: 'name' },
           { header: 'Loại', accessor: 'type' },
           { header: 'Tình trạng', accessor: 'condition' },
           {
             header: 'Thao tác',
-            accessor: 'id',
+            accessor: '_id',
             render: (_, row) => (
               <div className='flex gap-2'>
                 <button
@@ -497,7 +529,7 @@ const DrainageDataManagement = () => {
                   <FaEdit />
                 </button>
                 <button
-                  onClick={() => handleDelete(row.id)}
+                  onClick={() => handleDelete((row as any)._id || row.id)}
                   className='p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors'
                 >
                   <FaTrash />

@@ -15,38 +15,15 @@ import { Table, Input, Modal, Button } from '../../../components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { api } from '../../../plugins/axios';
-
-import type { WeatherData } from '../../../types/dataManagement';
-
-interface UploadResult {
-  successful: number;
-  failed: number;
-  duplicates: number;
-  details: {
-    row: number;
-    message: string;
-    data?: Partial<WeatherData>;
-  }[];
-}
-
-interface CSVWeatherData {
-  Ngày: string;
-  'Mã phường xã': string;
-  'Nhiệt độ (°C)': string;
-  'Độ ẩm (%)': string;
-  'Tốc độ gió (km/h)': string;
-  'Hướng gió': string;
-  'Lượng mưa (mm)': string;
-  'Áp suất (hPa)': string;
-  'Mô tả thời tiết': string;
-}
-
+import type {
+  WeatherData,
+s} from '../../../types/dataManagement'
 const WeatherDataManagement = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingData, setEditingData] = useState<WeatherData | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResults, setUploadResults] = useState<UploadResult | null>(null);
+  const [uploadResults, setUploadResults] = useState<WeatherUploadResult | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -72,9 +49,21 @@ const WeatherDataManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weather'] });
       toast.success('Weather data created successfully');
+      setIsUploadModalOpen(false);
+      setEditingData(null);
+      setFormData({
+        id: '',
+        ward_id: '',
+        date: new Date().toISOString().split('T')[0],
+        temperature: { current: 0, min: 0, max: 0, feels_like: 0 },
+        humidity: 0,
+        rainfall: 0,
+        wind_speed: 0,
+      });
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to create weather data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to create weather data';
+      toast.error(errorMessage);
     },
   });
 
@@ -86,9 +75,21 @@ const WeatherDataManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weather'] });
       toast.success('Weather data updated successfully');
+      setIsEditModalOpen(false);
+      setEditingData(null);
+      setFormData({
+        id: '',
+        ward_id: '',
+        date: new Date().toISOString().split('T')[0],
+        temperature: { current: 0, min: 0, max: 0, feels_like: 0 },
+        humidity: 0,
+        rainfall: 0,
+        wind_speed: 0,
+      });
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to update weather data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to update weather data';
+      toast.error(errorMessage);
     },
   });
 
@@ -101,8 +102,9 @@ const WeatherDataManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['weather'] });
       toast.success('Weather data deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete weather data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to delete weather data';
+      toast.error(errorMessage);
     },
   });
 
@@ -123,28 +125,17 @@ const WeatherDataManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Remove 'id' field from formData before sending to API
+    const { id, ...apiData } = formData;
+    
     if (editingData) {
-      await updateWeatherMutation.mutateAsync({ id: editingData.id, data: formData });
+      const recordId = (editingData as any)._id || editingData.id;
+      await updateWeatherMutation.mutateAsync({ id: recordId, data: apiData });
     } else {
-      await createWeatherMutation.mutateAsync(formData);
+      await createWeatherMutation.mutateAsync(apiData);
     }
-    setIsUploadModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditingData(null);
-    setFormData({
-      id: '',
-      ward_id: '',
-      date: new Date().toISOString().split('T')[0],
-      temperature: {
-        current: 0,
-        min: 0,
-        max: 0,
-        feels_like: 0,
-      },
-      humidity: 0,
-      rainfall: 0,
-      wind_speed: 0,
-    });
+    // Reset will be handled in onSuccess callbacks
   };
 
   const handleEdit = (data: WeatherData) => {
@@ -455,8 +446,24 @@ const WeatherDataManagement = () => {
 
       <Table
         columns={[
-          { header: 'ID Phường', accessor: 'ward_id' },
-          { header: 'Ngày', accessor: 'date' },
+          { header: 'ID Phường', accessor: 'ward_id' ,  render: (value: unknown) => {
+            console.log(value);
+            return <div>{value.ward_name}{ value.district} </div>
+          }},
+          { 
+            header: 'Ngày', 
+            accessor: 'date',
+            render: (value) => {
+              if (!value) return '-';
+              try {
+                const date = new Date(value);
+                if (isNaN(date.getTime())) return value as string;
+                return date.toLocaleDateString('vi-VN');
+              } catch {
+                return value as string;
+              }
+            }
+          },
           { header: 'Lượng mưa (mm)', accessor: 'rainfall' },
           {
             header: 'Nhiệt độ (°C)',
@@ -470,7 +477,7 @@ const WeatherDataManagement = () => {
           { header: 'Tốc độ gió (km/h)', accessor: 'wind_speed' },
           {
             header: 'Thao tác',
-            accessor: 'id',
+            accessor: '_id',
             render: (_, row) => (
               <div className='flex gap-2'>
                 <button
@@ -484,7 +491,7 @@ const WeatherDataManagement = () => {
                   <FaEdit />
                 </button>
                 <button
-                  onClick={() => handleDelete(row.id)}
+                  onClick={() => handleDelete((row as any)._id || row.id)}
                   className='p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors'
                 >
                   <FaTrash />

@@ -1,0 +1,453 @@
+{
+    "ward_api_request_bodies": {
+        "getWards": {
+            "description": "Lấy danh sách phường/xã",
+            "method": "GET",
+            "url": "http://localhost:5000/api/wards?page=1&limit=10&district=Quận 1&province=TP.HCM&risk_level=High&sort=flood_risk&order=desc",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWardById": {
+            "description": "Lấy thông tin phường/xã theo ID",
+            "method": "GET",
+            "url": "http://localhost:5000/api/wards/WARD_ID",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWardByName": {
+            "description": "Lấy thông tin phường/xã theo tên",
+            "method": "GET",
+            "url": "http://localhost:5000/api/wards/name/Phường 1",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "createWard": {
+            "description": "Tạo phường/xã mới (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/wards",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "ward_name": "Phường Test",
+                "district": "Quận Test",
+                "province": "TP.HCM",
+                "area": 5.2,
+                "population": 45000,
+                "coordinates": [106.6297, 10.8231],
+                "population_density": 8653.85,
+                "rainfall": 1800.5,
+                "low_elevation": 1.2,
+                "urban_land": 78.5,
+                "drainage_capacity": 85.3
+            }
+        },
+
+        "updateWard": {
+            "description": "Cập nhật thông tin phường/xã (Admin only)",
+            "method": "PUT",
+            "url": "http://localhost:5000/api/wards/WARD_ID",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "population": 48000,
+                "population_density": 9230.77,
+                "rainfall": 1950.8,
+                "urban_land": 82.1,
+                "drainage_capacity": 90.5
+            }
+        },
+
+        "deleteWard": {
+            "description": "Xóa phường/xã (soft delete - Admin only)",
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/wards/WARD_ID",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "calculateRisk": {
+            "description": "Tính toán rủi ro ngập lụt cho phường/xã (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/wards/WARD_ID/calculate-risk",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getWardsByRiskLevel": {
+            "description": "Lấy danh sách phường/xã theo mức độ rủi ro",
+            "method": "GET",
+            "url": "http://localhost:5000/api/wards/risk/High",
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "notes": "Valid risk levels: Very Low, Low, Medium, High, Very High"
+        },
+
+        "getWardStats": {
+            "description": "Lấy thống kê tổng quan về các phường/xã",
+            "method": "GET",
+            "url": "http://localhost:5000/api/wards/stats",
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+
+        "bulkImportWards": {
+            "description": "Import hàng loạt dữ liệu phường/xã (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/wards/bulk-import",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "wards": [{
+                        "ward_name": "Phường A",
+                        "district": "Quận 1",
+                        "province": "TP.HCM",
+                        "area": 2.5,
+                        "population": 25000,
+                        "coordinates": [106.6958, 10.7767],
+                        "population_density": 10000,
+                        "rainfall": 1650.0,
+                        "low_elevation": 0.8,
+                        "urban_land": 85.2,
+                        "drainage_capacity": 92.5
+                    },
+                    {
+                        "ward_name": "Phường B",
+                        "district": "Quận 2",
+                        "province": "TP.HCM",
+                        "area": 3.8,
+                        "population": 32000,
+                        "coordinates": [106.7308, 10.7870],
+                        "population_density": 8421.05,
+                        "rainfall": 1720.5,
+                        "low_elevation": 1.5,
+                        "urban_land": 72.8,
+                        "drainage_capacity": 78.9
+                    }
+                ]
+            }
+        }
+    },
+
+    "sample_ward_data_formats": {
+        "complete_ward_record": {
+            "ward_name": "Phường Nguyễn Thái Bình",
+            "district": "Quận 1",
+            "province": "TP.HCM",
+            "area": 4.2,
+            "population": 38000,
+            "coordinates": [106.6958, 10.7767],
+            "population_density": 9047.62,
+            "rainfall": 1850.5,
+            "low_elevation": 1.1,
+            "urban_land": 88.5,
+            "drainage_capacity": 95.2,
+            "flood_risk": 0.75,
+            "risk_level": "High",
+            "isActive": true
+        },
+
+        "minimal_ward_record": {
+            "ward_name": "Phường Test",
+            "district": "Quận Test",
+            "province": "TP.HCM"
+        },
+
+        "risk_calculation_parameters": {
+            "population_density": "Mật độ dân số (người/km²)",
+            "rainfall": "Lượng mưa trung bình (mm/năm)",
+            "low_elevation": "Độ cao thấp nhất (m)",
+            "urban_land": "Tỷ lệ đất đô thị (%)",
+            "drainage_capacity": "Khả năng thoát nước (%)"
+        }
+    },
+
+    "query_parameters": {
+        "pagination": {
+            "page": "Số trang (mặc định: 1)",
+            "limit": "Số bản ghi mỗi trang (mặc định: 10)"
+        },
+        "filtering": {
+            "district": "Lọc theo quận/huyện",
+            "province": "Lọc theo tỉnh/thành phố",
+            "risk_level": "Lọc theo mức độ rủi ro",
+            "ward_name": "Tìm kiếm theo tên phường/xã"
+        },
+        "sorting": {
+            "sort": "Trường sắp xếp (flood_risk, population_density, rainfall, etc.)",
+            "order": "asc/desc (mặc định: desc)"
+        }
+    },
+
+    "response_examples": {
+        "getWards_success": {
+            "success": true,
+            "wards": [{
+                "_id": "ward_id",
+                "ward_name": "Phường Nguyễn Thái Bình",
+                "district": "Quận 1",
+                "province": "TP.HCM",
+                "area": 4.2,
+                "population": 38000,
+                "coordinates": [106.6958, 10.7767],
+                "population_density": 9047.62,
+                "rainfall": 1850.5,
+                "low_elevation": 1.1,
+                "urban_land": 88.5,
+                "drainage_capacity": 95.2,
+                "flood_risk": 0.75,
+                "risk_level": "High",
+                "isActive": true,
+                "createdAt": "2024-01-15T08:00:00.000Z",
+                "updatedAt": "2024-01-15T08:00:00.000Z"
+            }],
+            "pagination": {
+                "page": 1,
+                "limit": 10,
+                "total": 150,
+                "pages": 15
+            }
+        },
+
+        "createWard_success": {
+            "success": true,
+            "message": "Ward created successfully",
+            "ward": {
+                "_id": "new_ward_id",
+                "ward_name": "Phường Test",
+                "district": "Quận Test",
+                "province": "TP.HCM",
+                "area": 5.2,
+                "population": 45000,
+                "coordinates": [106.6297, 10.8231],
+                "population_density": 8653.85,
+                "rainfall": 1800.5,
+                "low_elevation": 1.2,
+                "urban_land": 78.5,
+                "drainage_capacity": 85.3,
+                "flood_risk": 0.65,
+                "risk_level": "Medium",
+                "isActive": true
+            }
+        },
+
+        "calculateRisk_success": {
+            "success": true,
+            "message": "Flood risk calculated successfully",
+            "ward": {
+                "_id": "ward_id",
+                "ward_name": "Phường Nguyễn Thái Bình",
+                "flood_risk": 0.82,
+                "risk_level": "Very High",
+                "updatedAt": "2024-01-15T09:30:00.000Z"
+            }
+        },
+
+        "getWardStats_success": {
+            "success": true,
+            "statistics": {
+                "totalWards": 150,
+                "avgRisk": 0.45,
+                "maxRisk": 0.95,
+                "avgRainfall": 1750.8,
+                "avgElevation": 1.3,
+                "avgDrainage": 82.5,
+                "totalPopulation": 4500000
+            },
+            "riskDistribution": [{
+                    "label": "Very Low",
+                    "count": 25,
+                    "percentage": "16.7"
+                },
+                {
+                    "label": "Low",
+                    "count": 35,
+                    "percentage": "23.3"
+                },
+                {
+                    "label": "Medium",
+                    "count": 40,
+                    "percentage": "26.7"
+                },
+                {
+                    "label": "High",
+                    "count": 30,
+                    "percentage": "20.0"
+                },
+                {
+                    "label": "Very High",
+                    "count": 20,
+                    "percentage": "13.3"
+                }
+            ]
+        },
+
+        "bulkImportWards_success": {
+            "success": true,
+            "message": "Bulk import completed. 8 successful, 1 failed, 1 duplicates",
+            "results": {
+                "successful": [{
+                        "id": "ward_id_1",
+                        "ward_name": "Phường A"
+                    },
+                    {
+                        "id": "ward_id_2",
+                        "ward_name": "Phường B"
+                    }
+                ],
+                "failed": [{
+                    "ward_name": "Phường C",
+                    "error": "Validation failed: area must be a positive number"
+                }],
+                "duplicates": [{
+                    "ward_name": "Phường D",
+                    "reason": "Ward name already exists"
+                }]
+            }
+        }
+    },
+
+    "error_responses": {
+        "validation_error": {
+            "success": false,
+            "error": "Validation failed",
+            "details": [
+                "Ward name is required",
+                "Area must be a positive number",
+                "Population density must be non-negative"
+            ]
+        },
+
+        "duplicate_name_error": {
+            "success": false,
+            "error": "Ward with this name already exists"
+        },
+
+        "not_found_error": {
+            "success": false,
+            "error": "Ward not found"
+        },
+
+        "invalid_risk_level_error": {
+            "success": false,
+            "error": "Invalid risk level. Must be: Very Low, Low, Medium, High, Very High"
+        },
+
+        "missing_risk_params_error": {
+            "success": false,
+            "error": "Ward must have all risk parameters to calculate flood risk"
+        }
+    },
+
+    "data_constraints": {
+        "required_fields": [
+            "ward_name",
+            "district",
+            "province"
+        ],
+        "optional_fields": [
+            "area",
+            "population",
+            "coordinates",
+            "population_density",
+            "rainfall",
+            "low_elevation",
+            "urban_land",
+            "drainage_capacity"
+        ],
+        "constraints": {
+            "ward_name": "String, unique, max 100 chars",
+            "district": "String, max 100 chars",
+            "province": "String, max 100 chars",
+            "area": "Number > 0 (km²)",
+            "population": "Integer ≥ 0",
+            "coordinates": "[longitude, latitude] array",
+            "population_density": "Number ≥ 0 (people/km²)",
+            "rainfall": "Number ≥ 0 (mm/year)",
+            "low_elevation": "Number ≥ 0 (meters)",
+            "urban_land": "Number 0-100 (%)",
+            "drainage_capacity": "Number 0-100 (%)"
+        },
+        "risk_levels": [
+            "Very Low (0.0 - 0.2)",
+            "Low (0.2 - 0.4)",
+            "Medium (0.4 - 0.6)",
+            "High (0.6 - 0.8)",
+            "Very High (0.8 - 1.0)"
+        ]
+    },
+
+    "api_endpoints_summary": {
+        "public_apis": [
+            "GET /api/wards - List all wards",
+            "GET /api/wards/:id - Get ward by ID",
+            "GET /api/wards/name/:name - Get ward by name",
+            "GET /api/wards/risk/:level - Get wards by risk level",
+            "GET /api/wards/stats - Get ward statistics"
+        ],
+        "admin_apis": [
+            "POST /api/wards - Create new ward",
+            "PUT /api/wards/:id - Update ward",
+            "DELETE /api/wards/:id - Delete ward (soft delete)",
+            "POST /api/wards/:id/calculate-risk - Calculate flood risk",
+            "POST /api/wards/bulk-import - Bulk import wards"
+        ]
+    },
+
+    "testing_guide": {
+        "step1": "Test GET APIs để xem danh sách wards hiện có",
+        "step2": "Test POST /api/wards để tạo ward mới (cần admin token)",
+        "step3": "Test POST /api/wards/:id/calculate-risk để tính flood risk",
+        "step4": "Test GET /api/wards/stats để xem thống kê",
+        "step5": "Test bulk import với nhiều wards",
+        "step6": "Test filtering và sorting với query parameters",
+        "step7": "Test update và delete operations"
+    },
+
+    "sample_test_data": {
+        "sample_wards": [{
+                "ward_name": "Phường Bến Nghé",
+                "district": "Quận 1",
+                "province": "TP.HCM",
+                "area": 0.35,
+                "population": 12000,
+                "coordinates": [106.6958, 10.7767],
+                "population_density": 34285.71,
+                "rainfall": 1900.5,
+                "low_elevation": 0.5,
+                "urban_land": 95.2,
+                "drainage_capacity": 88.5
+            },
+            {
+                "ward_name": "Phường An Lạc",
+                "district": "Quận Bình Tân",
+                "province": "TP.HCM",
+                "area": 2.8,
+                "population": 35000,
+                "coordinates": [106.6108, 10.7500],
+                "population_density": 12500.00,
+                "rainfall": 1650.0,
+                "low_elevation": 1.8,
+                "urban_land": 45.8,
+                "drainage_capacity": 72.3
+            }
+        ]
+    }
+}

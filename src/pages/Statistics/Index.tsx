@@ -1,4 +1,5 @@
 import { useState } from "react";
+import dayjs from "dayjs";
 import DailyStatistics from "./components/DailyStatistics";
 import MonthlyStatistics from "./components/MonthlyStatistics";
 import YearlyStatistics from "./components/YearlyStatistics";
@@ -11,16 +12,16 @@ import type { ViewType } from "../../types";
 const StatisticsPage = () => {
   const [activeView, setActiveView] = useState<ViewType>("daily");
   const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear(),
+    dayjs().year(),
   );
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    new Date().getMonth() + 1,
+    dayjs().month() + 1,
   );
   const [startDate, setStartDate] = useState<string>(
-    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
+    dayjs().startOf('year').format('YYYY-MM-DD'),
   );
   const [endDate, setEndDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
+    dayjs().format('YYYY-MM-DD'),
   );
 
   const renderContent = () => {

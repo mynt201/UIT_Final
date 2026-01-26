@@ -57,8 +57,22 @@ const RiskIndexManagement = () => {
   } = useQuery({
     queryKey: ['risk'],
     queryFn: async () => {
-      const response = await api.get('/risk');
-      return response.data.riskIndexData || [];
+      try {
+        const response = await api.get('/risk');
+        let data = response.data.riskIndexData || [];
+
+        // Ensure each record has _id field
+        data = data.map((item: any, index: number) => ({
+          ...item,
+          _id: item._id || item.id || `risk_${index}`,
+          id: item.id || item._id || `risk_${index}`
+        }));
+
+        return data;
+      } catch (error) {
+        // Return empty array if API fails
+        return [];
+      }
     },
   });
 
@@ -71,9 +85,21 @@ const RiskIndexManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risk'] });
       toast.success('Risk index data created successfully');
+      setIsUploadModalOpen(false);
+      setEditingData(null);
+      setFormData({
+        id: '',
+        ward_id: '',
+        date: new Date().toISOString().split('T')[0],
+        exposure: 0,
+        susceptibility: 0,
+        resilience: 0,
+        risk_index: 0,
+      });
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to create risk index data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to create risk index data';
+      toast.error(errorMessage);
     },
   });
 
@@ -85,9 +111,21 @@ const RiskIndexManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risk'] });
       toast.success('Risk index data updated successfully');
+      setIsEditModalOpen(false);
+      setEditingData(null);
+      setFormData({
+        id: '',
+        ward_id: '',
+        date: new Date().toISOString().split('T')[0],
+        exposure: 0,
+        susceptibility: 0,
+        resilience: 0,
+        risk_index: 0,
+      });
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to update risk index data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to update risk index data';
+      toast.error(errorMessage);
     },
   });
 
@@ -100,8 +138,9 @@ const RiskIndexManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['risk'] });
       toast.success('Risk index data deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete risk index data: ${error.message}`);
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to delete risk index data';
+      toast.error(errorMessage);
     },
   });
 
@@ -151,23 +190,17 @@ const RiskIndexManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Remove 'id' field from formData before sending to API
+    const { id, ...apiData } = formData;
+    
     if (editingData) {
-      await updateRiskIndexMutation.mutateAsync({ id: editingData.id, data: formData });
+      const recordId = (editingData as any)._id || editingData.id;
+      await updateRiskIndexMutation.mutateAsync({ id: recordId, data: apiData });
     } else {
-      await createRiskIndexMutation.mutateAsync(formData);
+      await createRiskIndexMutation.mutateAsync(apiData);
     }
-    setIsUploadModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditingData(null);
-    setFormData({
-      id: '',
-      ward_id: '',
-      date: new Date().toISOString().split('T')[0],
-      exposure: 0,
-      susceptibility: 0,
-      resilience: 0,
-      risk_index: 0,
-    });
+    // Reset will be handled in onSuccess callbacks
   };
 
   const handleEdit = (data: RiskIndexData) => {
@@ -289,14 +322,31 @@ const RiskIndexManagement = () => {
           data: undefined,
         });
       } else {
-        // Convert to API format
+        // Convert risk levels to numeric values
+        const riskLevelMap: { [key: string]: number } = {
+          'Thấp': 1,
+          'Trung bình': 2,
+          'Cao': 3,
+        };
+
+        // Calculate exposure, susceptibility, resilience from risk levels
+        const rainfallRisk = riskLevelMap[row['Rủi ro mưa']] || 1;
+        const drainageRisk = riskLevelMap[row['Rủi ro thoát nước']] || 1;
+        const floodHistoryRisk = riskLevelMap[row['Rủi ro lịch sử ngập']] || 1;
+        const topographyRisk = riskLevelMap[row['Rủi ro địa hình']] || 1;
+        const populationRisk = riskLevelMap[row['Rủi ro mật độ dân số']] || 1;
+        const overallRisk = riskLevelMap[row['Rủi ro tổng thể']] || 1;
+
+        // Convert to API format - send ward_name, backend will find ward_id
         valid.push({
-          ward_id: row['Mã phường xã'],
+          ward_name: row['Mã phường xã'], // CSV "Mã phường xã" is actually ward_name
           date: row['Ngày đánh giá'],
-          exposure: 0, // Will be calculated based on risk levels
-          susceptibility: 0,
-          resilience: 0,
-          risk_index: 0, // Will be calculated
+          exposure: (populationRisk + rainfallRisk) / 2 * 2.5, // Scale to 0-10
+          susceptibility: (drainageRisk + floodHistoryRisk + topographyRisk) / 3 * 2.5,
+          resilience: (10 - overallRisk * 2.5), // Inverse of overall risk
+          risk_index: overallRisk * 2.5, // Scale to 0-10
+          risk_category: overallRisk >= 2.5 ? 'High' : overallRisk >= 1.5 ? 'Medium' : 'Low',
+          description: row['Mô tả đánh giá'] || '',
         });
       }
     }
@@ -476,7 +526,32 @@ const RiskIndexManagement = () => {
 
       <Table
         columns={[
-          { header: 'ID Phường', accessor: 'ward_id' },
+          { 
+            header: 'Phường/Xã', 
+            accessor: 'ward_id',
+            render: (value, row) => {
+              // If ward_id is populated, show ward_name
+              if (row.ward_id && typeof row.ward_id === 'object' && row.ward_id.ward_name) {
+                return row.ward_id.ward_name;
+              }
+              // Otherwise show ID
+              return value || '-';
+            }
+          },
+          {
+            header: 'Ngày đánh giá',
+            accessor: 'date',
+            render: (value) => {
+              if (!value) return '-';
+              try {
+                const date = new Date(value);
+                if (isNaN(date.getTime())) return value as string;
+                return date.toLocaleDateString('vi-VN');
+              } catch {
+                return value as string;
+              }
+            }
+          },
           {
             header: 'Exposure',
             accessor: 'exposure',
@@ -520,7 +595,7 @@ const RiskIndexManagement = () => {
           },
           {
             header: 'Thao tác',
-            accessor: 'id',
+            accessor: '_id',
             render: (_, row) => (
               <div className='flex gap-2'>
                 <button
@@ -534,7 +609,7 @@ const RiskIndexManagement = () => {
                   <FaEdit />
                 </button>
                 <button
-                  onClick={() => handleDelete(row.id)}
+                  onClick={() => handleDelete((row as any)._id || row.id)}
                   className='p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors'
                 >
                   <FaTrash />

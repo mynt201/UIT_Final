@@ -5,7 +5,6 @@ import {
 } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
-import { formatNumber } from "../../../utils/formatUtils";
 import type { Statistics } from "../../../types";
 
 interface StatisticsCardsProps {

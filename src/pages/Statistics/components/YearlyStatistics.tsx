@@ -1,52 +1,128 @@
 import { useMemo, useState } from 'react';
-import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaSpinner } from 'react-icons/fa';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 import { Table, Select } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
 import { formatNumber } from '../../../utils/formatUtils';
+import type { WeatherData, RiskIndexData } from '../../../types/dataManagement';
+import { useYearlyStatistics } from '../../../hooks/useStatistics';
+
+// Extended types for API responses
+type WeatherDataWithDates = WeatherData & {
+  recorded_at?: string;
+};
+
+type RiskIndexDataWithCategory = RiskIndexData & {
+  createdAt?: string;
+  risk_category?: string;
+};
 
 const YearlyStatistics = () => {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
-  const [startYear, setStartYear] = useState<number>(new Date().getFullYear() - 4);
+  const [startYear, setStartYear] = useState<number>(dayjs().year() - 4);
+  const endYear = startYear + 4;
+  const { data: apiData, isLoading } = useYearlyStatistics(startYear, endYear);
+
   const yearlyData = useMemo(() => {
     const years = [];
 
-    // Simple seeded random function for consistent mock data
-    const seededRandom = (seed: number) => {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    };
+    // If API data is available, process it
+    if (apiData && apiData.weatherData && apiData.riskData) {
+      for (let year = startYear; year <= endYear; year++) {
+        const yearStart = dayjs(`${year}-01-01`).startOf('year');
+        const yearEnd = dayjs(`${year}-12-31`).endOf('year');
 
-    for (let year = startYear; year <= startYear + 4; year++) {
-      const seed = year * 1000;
-      // Mock data with seeded random for consistency
-      const totalRainfall = 1200 + seededRandom(seed) * 800;
-      const avgRisk = 2.0 + seededRandom(seed + 1) * 2.0;
-      const highRiskMonths = Math.floor(seededRandom(seed + 2) * 6) + 2;
-      const totalHighRiskDays = Math.floor(seededRandom(seed + 3) * 100) + 50;
+        // Filter data for this year
+        const yearWeather = apiData.weatherData.filter((w: WeatherDataWithDates) => {
+          const date = dayjs(w.date || w.recorded_at || '');
+          return date.isValid() && date.isSameOrAfter(yearStart) && date.isSameOrBefore(yearEnd);
+        });
 
-      years.push({
-        year,
-        totalRainfall: Math.round(totalRainfall),
-        avgRisk: parseFloat(avgRisk.toFixed(2)),
-        highRiskMonths,
-        totalHighRiskDays,
-        maxRisk: parseFloat((avgRisk + seededRandom(seed + 4) * 1.5).toFixed(2)),
-        minRisk: parseFloat((avgRisk - seededRandom(seed + 5) * 0.5).toFixed(2)),
-      });
+        const yearRisk = apiData.riskData.filter((r: RiskIndexDataWithCategory) => {
+          const date = dayjs(r.date || r.createdAt || '');
+          return date.isValid() && date.isSameOrAfter(yearStart) && date.isSameOrBefore(yearEnd);
+        });
+
+        // Calculate totals and averages
+        const totalRainfall = yearWeather.reduce((sum: number, w: WeatherDataWithDates) => sum + (w.rainfall || 0), 0);
+
+        const avgRisk =
+          yearRisk.length > 0
+            ? yearRisk.reduce((sum: number, r: RiskIndexDataWithCategory) => sum + (r.risk_index || 0), 0) / yearRisk.length
+            : 0;
+
+        // Count high risk months (months with at least one high risk day)
+        const highRiskMonths = new Set<number>();
+        yearRisk.forEach((r: RiskIndexDataWithCategory) => {
+          if (r.risk_category === 'High' || r.risk_category === 'Cao') {
+            const date = dayjs(r.date || r.createdAt || '');
+            if (date.isValid()) {
+              highRiskMonths.add(date.month());
+            }
+          }
+        });
+
+        const totalHighRiskDays = yearRisk.filter(
+          (r: RiskIndexDataWithCategory) => r.risk_category === 'High' || r.risk_category === 'Cao'
+        ).length;
+
+        const riskValues = yearRisk.map((r: RiskIndexDataWithCategory) => r.risk_index || 0).filter((v: number) => v > 0);
+        const maxRisk = riskValues.length > 0 ? Math.max(...riskValues) : 0;
+        const minRisk = riskValues.length > 0 ? Math.min(...riskValues) : 0;
+
+        years.push({
+          year,
+          totalRainfall: Math.round(totalRainfall),
+          avgRisk: parseFloat(avgRisk.toFixed(2)),
+          highRiskMonths: highRiskMonths.size,
+          totalHighRiskDays,
+          maxRisk: parseFloat(maxRisk.toFixed(2)),
+          minRisk: parseFloat(minRisk.toFixed(2)),
+        });
+      }
+    } else {
+      // Fallback to mock data
+      const seededRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+
+      for (let year = startYear; year <= endYear; year++) {
+        const seed = year * 1000;
+        const totalRainfall = 1200 + seededRandom(seed) * 800;
+        const avgRisk = 2.0 + seededRandom(seed + 1) * 2.0;
+        const highRiskMonths = Math.floor(seededRandom(seed + 2) * 6) + 2;
+        const totalHighRiskDays = Math.floor(seededRandom(seed + 3) * 100) + 50;
+
+        years.push({
+          year,
+          totalRainfall: Math.round(totalRainfall),
+          avgRisk: parseFloat(avgRisk.toFixed(2)),
+          highRiskMonths,
+          totalHighRiskDays,
+          maxRisk: parseFloat((avgRisk + seededRandom(seed + 4) * 1.5).toFixed(2)),
+          minRisk: parseFloat((avgRisk - seededRandom(seed + 5) * 0.5).toFixed(2)),
+        });
+      }
     }
 
     return years;
-  }, [startYear]);
+  }, [startYear, endYear, apiData]);
 
   const maxRainfall = Math.max(...yearlyData.map((y) => y.totalRainfall));
   const maxRisk = Math.max(...yearlyData.map((y) => y.avgRisk));
 
   // Generate year options for filter (from 2010 to current year)
   const yearOptions = Array.from(
-    { length: new Date().getFullYear() - 2010 + 1 },
-    (_, i) => new Date().getFullYear() - i
+    { length: dayjs().year() - 2010 + 1 },
+    (_, i) => dayjs().year() - i
   ).map((year) => ({
     value: year,
     label: year.toString(),
@@ -57,6 +133,15 @@ const YearlyStatistics = () => {
     if (previous === 0) return 0;
     return ((current - previous) / previous) * 100;
   };
+
+  if (isLoading) {
+    return (
+      <div className={`flex flex-col items-center justify-center py-12 gap-3 ${themeClasses.text}`}>
+        <FaSpinner className="animate-spin text-4xl text-blue-500" />
+        <p className="text-lg">Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>
@@ -259,7 +344,7 @@ const YearlyStatistics = () => {
             {
               header: 'Tổng lượng mưa (mm)',
               accessor: 'totalRainfall',
-              render: (value) => `${formatNumber(value)} mm`,
+              render: (value) => `${formatNumber(value as number)} mm`,
             },
             {
               header: 'Chỉ số rủi ro TB',

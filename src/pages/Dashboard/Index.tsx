@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
-import { FaDownload } from "react-icons/fa";
+import { FaDownload, FaSpinner } from "react-icons/fa";
+import { useDebounce } from "../../hooks/useDebounce";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { Button } from "../../components";
@@ -9,6 +10,7 @@ import {
   calcFloodRiskIndex,
   getRiskLevel,
 } from "../PageView/Partials/floodRiskUtils";
+import type { WardStat } from "../../types";
 import SearchAndFilter from "./Partials/SearchAndFilter";
 import StatisticsCards from "./Partials/StatisticsCards";
 import RiskDistributionChart from "./Partials/RiskDistributionChart";
@@ -22,25 +24,44 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Fetch data from API - hooks must be called unconditionally at the top level
+  // Debounce search term to avoid too many API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Handlers that reset page when filter/search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  const handleRiskLevelChange = (value: string) => {
+    setSelectedRiskLevel(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  // Fetch data from API with search and filter params
   const { data: wardsData, isLoading: wardsLoading } = useWards({
     page: currentPage,
     limit: itemsPerPage,
-    district: searchTerm ? undefined : undefined, // Add district filter if needed
+    ward_name: debouncedSearchTerm || undefined,
+    risk_level: selectedRiskLevel !== "all" ? selectedRiskLevel : undefined,
   });
 
-  const { isLoading: statsLoading } = useWardStats();
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useWardStats();
 
   // Loading state
   const isLoading = wardsLoading || statsLoading;
 
   // Convert API data to component format with calculated flood risk
-  const wardStats = useMemo(() => {
+  const wardStats = useMemo((): WardStat[] => {
     if (!wardsData?.wards) {
       return [];
     }
 
-    return wardsData.wards.map((ward) => {
+    return wardsData.wards.map((ward): WardStat => {
       // Calculate flood risk components
       const exposure = ward.population_density / 1000 + ward.rainfall / 200;
       const susceptibility = ward.low_elevation + ward.urban_land;
@@ -52,15 +73,17 @@ const Index = () => {
       );
       const riskLevel = getRiskLevel(floodRisk);
 
+      const riskLevelLabel: "Cao" | "Trung Bình" | "Thấp" =
+        riskLevel === "cao"
+          ? "Cao"
+          : riskLevel === "trungBinh"
+          ? "Trung Bình"
+          : "Thấp";
+
       return {
         ward_name: ward.ward_name,
         flood_risk: floodRisk,
-        risk_level:
-          riskLevel === "cao"
-            ? "Cao"
-            : riskLevel === "trungBinh"
-            ? "Trung Bình"
-            : "Thấp",
+        risk_level: riskLevelLabel,
         population_density: ward.population_density,
         rainfall: ward.rainfall,
         exposure,
@@ -70,8 +93,33 @@ const Index = () => {
     });
   }, [wardsData]);
 
-  // Calculate statistics from computed data
+  // Calculate statistics - use API stats if available, otherwise calculate from local data
   const statistics = useMemo(() => {
+    // If API stats are available, use them
+    if (statsData && statsData.statistics && !statsError) {
+      const apiStats = statsData.statistics;
+      // Calculate risk level counts from wardStats (for current page)
+      const highRisk = wardStats.filter((w) => w.risk_level === "Cao").length;
+      const mediumRisk = wardStats.filter(
+        (w) => w.risk_level === "Trung Bình",
+      ).length;
+      const lowRisk = wardStats.filter((w) => w.risk_level === "Thấp").length;
+
+      return {
+        totalWards: apiStats.totalWards || 0,
+        highRisk,
+        mediumRisk,
+        lowRisk,
+        avgRisk: apiStats.avgRisk || 0,
+        maxRisk: apiStats.maxRisk || 0,
+        totalPopulation: apiStats.totalPopulation || 0,
+        avgRainfall: apiStats.avgRainfall || 0,
+        avgElevation: apiStats.avgElevation || 0,
+        avgDrainage: apiStats.avgDrainage || 0,
+      };
+    }
+
+    // Fallback: Calculate from local data
     const highRisk = wardStats.filter((w) => w.risk_level === "Cao").length;
     const mediumRisk = wardStats.filter(
       (w) => w.risk_level === "Trung Bình",
@@ -119,42 +167,52 @@ const Index = () => {
       avgElevation,
       avgDrainage,
     };
-  }, [wardStats, wardsData]);
+  }, [wardStats, wardsData, statsData, statsError]);
 
-  const filteredWardStats = useMemo(() => {
-    return wardStats.filter((ward) => {
-      const matchesSearch = ward.ward_name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesRisk =
-        selectedRiskLevel === "all" || ward.risk_level === selectedRiskLevel;
-      return matchesSearch && matchesRisk;
-    });
-  }, [wardStats, searchTerm, selectedRiskLevel]);
+  // Use API data directly - no local filtering needed as API handles it
+  const filteredWardStats = wardStats;
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredWardStats.length / itemsPerPage);
+  // Pagination logic - use API pagination
+  const totalPages = wardsData?.pagination?.pages || 1;
+  const totalCount = wardsData?.pagination?.total || 0;
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentPage(1);
-  }, [searchTerm, selectedRiskLevel]);
-
-  const paginatedWards = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return [...filteredWardStats]
-      .sort((a, b) => b.flood_risk - a.flood_risk)
-      .slice(startIndex, endIndex);
-  }, [filteredWardStats, currentPage, itemsPerPage]);
+  // Use API data directly - already paginated and filtered
+  const paginatedWards = filteredWardStats;
 
   // Theme hook must be called unconditionally at the top level
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
-  const riskDistribution = useMemo(
-    () => [
+  const riskDistribution = useMemo(() => {
+    // Use API risk distribution if available
+    if (statsData && statsData.riskDistribution && !statsError) {
+      return statsData.riskDistribution.map((item) => {
+        // Map API labels to display labels
+        let label = item.label;
+        let color = "bg-gray-400";
+        
+        if (item.label === "High" || item.label === "Very High") {
+          label = "Cao";
+          color = "bg-red-500";
+        } else if (item.label === "Medium") {
+          label = "Trung Bình";
+          color = "bg-orange-400";
+        } else if (item.label === "Low" || item.label === "Very Low") {
+          label = "Thấp";
+          color = "bg-green-400";
+        }
+
+        return {
+          label,
+          count: item.count,
+          color,
+          percentage: parseFloat(item.percentage.toString()) || 0,
+        };
+      });
+    }
+
+    // Fallback: Calculate from local statistics
+    return [
       {
         label: "Cao",
         count: statistics.highRisk,
@@ -182,9 +240,8 @@ const Index = () => {
             ? (statistics.lowRisk / statistics.totalWards) * 100
             : 0,
       },
-    ],
-    [statistics],
-  );
+    ];
+  }, [statistics, statsData, statsError]);
 
   const handleExportCSV = () => {
     const headers = [
@@ -232,8 +289,9 @@ const Index = () => {
   // Show loading spinner or placeholder
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className={`flex flex-col items-center justify-center min-h-screen gap-3 ${themeClasses.text}`}>
+        <FaSpinner className="animate-spin text-4xl text-blue-500" />
+        <p className="text-lg">Đang tải dữ liệu...</p>
       </div>
     );
   }
@@ -266,10 +324,10 @@ const Index = () => {
       <SearchAndFilter
         searchTerm={searchTerm}
         selectedRiskLevel={selectedRiskLevel}
-        onSearchChange={setSearchTerm}
-        onRiskLevelChange={setSelectedRiskLevel}
-        filteredCount={filteredWardStats.length}
-        totalCount={wardStats.length}
+        onSearchChange={handleSearchChange}
+        onRiskLevelChange={handleRiskLevelChange}
+        filteredCount={totalCount}
+        totalCount={totalCount}
       />
 
       {/* Statistics Cards */}

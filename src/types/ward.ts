@@ -14,7 +14,7 @@ export interface WardData {
 export interface WardStat {
   ward_name: string;
   flood_risk: number;
-  risk_level: string;
+  risk_level: "Cao" | "Trung Bình" | "Thấp";
   population_density: number;
   rainfall: number;
   exposure: number;

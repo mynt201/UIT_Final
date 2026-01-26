@@ -1,0 +1,206 @@
+{
+    "user_api_request_bodies": {
+        "register": {
+            "description": "Đăng ký user mới",
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/register",
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "username": "testuser",
+                "email": "test@example.com",
+                "password": "password123",
+                "fullName": "Nguyễn Văn Test",
+                "phone": "0123456789",
+                "address": "123 Đường ABC, Quận 1, TP.HCM"
+            }
+        },
+
+        "login": {
+            "description": "Đăng nhập user",
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/login",
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "email": "test@example.com",
+                "password": "password123"
+            }
+        },
+
+        "getProfile": {
+            "description": "Lấy thông tin profile (cần token)",
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/profile",
+            "headers": {
+                "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "updateProfile": {
+            "description": "Cập nhật thông tin profile (cần token)",
+            "method": "PUT",
+            "url": "http://localhost:5000/api/users/profile",
+            "headers": {
+                "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "fullName": "Nguyễn Văn Updated",
+                "phone": "0987654321",
+                "address": "456 Đường XYZ, Quận 2, TP.HCM",
+                "email": "updated@example.com"
+            }
+        },
+
+        "changePassword": {
+            "description": "Đổi mật khẩu (cần token)",
+            "method": "PUT",
+            "url": "http://localhost:5000/api/users/change-password",
+            "headers": {
+                "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "currentPassword": "password123",
+                "newPassword": "newpassword123"
+            }
+        },
+
+        "getUsers": {
+            "description": "Lấy danh sách users (Admin only)",
+            "method": "GET",
+            "url": "http://localhost:5000/api/users?page=1&limit=10&role=user&search=test",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getUserById": {
+            "description": "Lấy thông tin user theo ID (Admin only)",
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/USER_ID_HERE",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "updateUser": {
+            "description": "Cập nhật thông tin user (Admin only)",
+            "method": "PUT",
+            "url": "http://localhost:5000/api/users/USER_ID_HERE",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "fullName": "Updated Name",
+                "phone": "0123456789",
+                "address": "New Address",
+                "role": "admin",
+                "isActive": true
+            }
+        },
+
+        "deleteUser": {
+            "description": "Xóa user (Admin only)",
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/users/USER_ID_HERE",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "getUserStats": {
+            "description": "Lấy thống kê users (Admin only)",
+            "method": "GET",
+            "url": "http://localhost:5000/api/users/stats",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            }
+        },
+
+        "createAdminUser": {
+            "description": "Tạo user admin mới (Admin only)",
+            "method": "POST",
+            "url": "http://localhost:5000/api/users/create-admin",
+            "headers": {
+                "Authorization": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "username": "adminuser",
+                "email": "admin@example.com",
+                "password": "adminpassword123",
+                "fullName": "Admin User",
+                "phone": "0123456789",
+                "address": "Admin Address"
+            }
+        }
+    },
+
+    "sample_responses": {
+        "register_success": {
+            "success": true,
+            "message": "User registered successfully",
+            "token": "jwt_token_here",
+            "user": {
+                "_id": "user_id_here",
+                "username": "testuser",
+                "email": "test@example.com",
+                "role": "user",
+                "fullName": "Nguyễn Văn Test",
+                "phone": "0123456789",
+                "address": "123 Đường ABC, Quận 1, TP.HCM",
+                "createdAt": "2025-01-18T00:00:00.000Z",
+                "lastLogin": "2025-01-18T00:00:00.000Z"
+            }
+        },
+
+        "login_success": {
+            "success": true,
+            "message": "Login successful",
+            "token": "jwt_token_here",
+            "user": {
+                "_id": "user_id_here",
+                "username": "testuser",
+                "email": "test@example.com",
+                "role": "user",
+                "fullName": "Nguyễn Văn Test",
+                "phone": "0123456789",
+                "address": "123 Đường ABC, Quận 1, TP.HCM",
+                "lastLogin": "2025-01-18T00:00:00.000Z"
+            }
+        },
+
+        "error_validation": {
+            "success": false,
+            "error": "Validation failed",
+            "details": [{
+                "field": "email",
+                "message": "Please provide a valid email",
+                "value": "invalid-email"
+            }]
+        },
+
+        "error_unauthorized": {
+            "success": false,
+            "error": "Access denied. No token provided."
+        }
+    },
+
+    "testing_steps": {
+        "step1": "Đăng ký user mới với POST /api/users/register",
+        "step2": "Đăng nhập với POST /api/users/login để lấy JWT token",
+        "step3": "Copy token từ response login để dùng cho các API cần auth",
+        "step4": "Test các API user với token: getProfile, updateProfile, changePassword",
+        "step5": "Test các API admin với admin token: getUsers, updateUser, deleteUser"
+    }
+}

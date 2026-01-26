@@ -25,8 +25,8 @@ export const getThemeClasses = (theme: Theme) => {
         : "bg-gray-800 border border-gray-700",
     sidebar:
       theme === "light"
-        ? "bg-gray-100 border-r border-gray-300"
-        : "bg-gray-800 border-r border-gray-700",
+        ? "bg-white border-r border-gray-200 shadow-sm"
+        : "bg-gray-900 border-r border-gray-800 shadow-lg",
     headerBg:
       theme === "light"
         ? "bg-white border-b border-gray-300"
