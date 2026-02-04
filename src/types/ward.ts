@@ -2,13 +2,18 @@ export interface WardData {
   ward_name: string;
   geometry: {
     type: string;
-    rings: number[][][];
+    rings?: number[][][]; // Format cũ (mock data)
+    coordinates?: number[][][][] | number[][][]; // GeoJSON format (MultiPolygon hoặc Polygon)
   };
   population_density: number;
   rainfall: number;
   low_elevation: number;
   urban_land: number;
   drainage_capacity: number;
+  flood_risk?: number;
+  risk_level?: string;
+  district?: string;
+  province?: string;
 }
 
 export interface WardStat {

@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaBell, FaUserCircle, FaSync, FaHome } from "react-icons/fa";
+import { FaBell, FaUserCircle, FaSync, FaHome, FaClock } from "react-icons/fa";
+import dayjs from "dayjs";
+import "dayjs/locale/vi";
 import { useAuth } from "../../../contexts/AuthContext";
 import { HOME_PATH } from "../../../router/routePath";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
+
+dayjs.locale("vi");
 
 interface AdminHeaderProps {
   onRefresh?: () => void;
@@ -28,19 +32,7 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
   }, []);
 
   const formatTime = (date: Date) => {
-    try {
-      return date.toLocaleString("vi-VN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-    } catch (error) {
-      return "Thời gian không hợp lệ";
-    }
+    return dayjs(date).format("dddd, DD [tháng] MMMM [năm] YYYY, HH:mm:ss");
   };
 
   const handleGoToHome = () => {
@@ -53,26 +45,22 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-0">
         <div>
-          <h2
-            className={`text-lg md:text-xl font-semibold ${themeClasses.text}`}
-          >
-            Dashboard Quản Trị
-          </h2>
+
           <p
-            className={`text-xs md:text-sm mt-1 ${themeClasses.textSecondary}`}
+            className={`text-xs md:text-sm mt-1 flex items-center gap-2 ${themeClasses.textSecondary}`}
           >
-            {formatTime(currentTime)}
+            <FaClock size={14} className="shrink-0" />
+            <span>{formatTime(currentTime)}</span>
           </p>
         </div>
         <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
           {!isAdmin && (
             <button
               onClick={handleGoToHome}
-              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 text-white rounded-lg transition-colors text-xs md:text-sm ${
-                theme === "light"
-                  ? "bg-indigo-600 hover:bg-indigo-700"
-                  : "bg-indigo-500 hover:bg-indigo-600"
-              }`}
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 text-white rounded-lg transition-colors text-xs md:text-sm ${theme === "light"
+                ? "bg-indigo-600 hover:bg-indigo-700"
+                : "bg-indigo-500 hover:bg-indigo-600"
+                }`}
               title="Quay về Trang chủ"
             >
               <FaHome size={16} className="md:w-[18px] md:h-[18px]" />
@@ -84,26 +72,22 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
           {onRefresh && (
             <button
               onClick={onRefresh}
-              className={`p-2 rounded-lg transition-colors ${
-                themeClasses.textSecondary
-              } ${
-                theme === "light"
+              className={`p-2 rounded-lg transition-colors ${themeClasses.textSecondary
+                } ${theme === "light"
                   ? "hover:text-gray-900 hover:bg-gray-200"
                   : "hover:text-white hover:bg-gray-700"
-              }`}
+                }`}
               title="Làm mới dữ liệu"
             >
               <FaSync size={20} />
             </button>
           )}
           <button
-            className={`p-2 rounded-lg transition-colors relative ${
-              themeClasses.textSecondary
-            } ${
-              theme === "light"
+            className={`p-2 rounded-lg transition-colors relative ${themeClasses.textSecondary
+              } ${theme === "light"
                 ? "hover:text-gray-900 hover:bg-gray-200"
                 : "hover:text-white hover:bg-gray-700"
-            }`}
+              }`}
             title="Thông báo"
           >
             <FaBell size={20} />

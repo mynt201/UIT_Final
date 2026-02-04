@@ -17,6 +17,42 @@ import {
 } from './floodRiskUtils';
 import FloodMapLegend from './FloodMapLegend';
 import WardDetailPanel from './WardDetailPanel';
+import type { WardData } from '../../../types/ward';
+
+// Hàm convert GeoJSON MultiPolygon/Polygon sang ArcGIS Polygon rings
+const convertGeoJSONToRings = (geometry: WardData['geometry']): number[][][] => {
+  // Nếu đã có rings (format cũ), trả về luôn
+  if (geometry.rings) {
+    return geometry.rings;
+  }
+
+  // Nếu có coordinates (GeoJSON format)
+  if (geometry.coordinates) {
+    const coords = geometry.coordinates;
+    
+    // MultiPolygon: coordinates là number[][][][]
+    if (geometry.type === 'MultiPolygon' && Array.isArray(coords) && coords.length > 0) {
+      // Lấy polygon đầu tiên
+      const firstPolygon = coords[0] as number[][][];
+      if (Array.isArray(firstPolygon) && firstPolygon.length > 0) {
+        // Convert từ GeoJSON [lng, lat] sang rings format
+        return firstPolygon.map(ring => 
+          ring.map(point => [point[0], point[1]]) // [lng, lat]
+        );
+      }
+    }
+    
+    // Polygon: coordinates là number[][][]
+    if (geometry.type === 'Polygon' && Array.isArray(coords) && coords.length > 0) {
+      return coords.map(ring => 
+        ring.map(point => [point[0], point[1]]) // [lng, lat]
+      );
+    }
+  }
+
+  // Fallback: trả về mảng rỗng
+  return [];
+};
 
 interface FloodMapViewProps {
   selectedWard?: string;
@@ -132,7 +168,7 @@ export default function FloodMapView({
     buildingsLayerRef.current = buildingsLayer;
 
     const map = new Map({
-      basemap: 'dark-gray-vector',
+      basemap: 'gray-vector', // Basemap sáng hơn để giống với hình ảnh
       layers: [roadsLayer, buildingsLayer],
     });
 
@@ -148,7 +184,7 @@ export default function FloodMapView({
 
     const wardLayer = new GraphicsLayer({
       title: 'Bản đồ rủi ro ngập lụt',
-      opacity: 0.8,
+      opacity: 0.85, // Tăng opacity một chút để màu rõ hơn
     });
     wardLayerRef.current = wardLayer;
 
@@ -186,32 +222,32 @@ export default function FloodMapView({
                   graphic.attributes.ward_name
                 ) {
                   const attributes = graphic.attributes;
-                  const ward = wards.find((w) => w.ward_name === attributes.ward_name);
+                  
+                  // Sử dụng popup content đã được tính toán sẵn từ attributes
+                  const popupContent = attributes.popup_content;
+                  
+                  if (popupContent) {
+                    // Mở popup ngay lập tức với content đã có sẵn
+                    view.popup.open({
+                      title: '',
+                      content: popupContent,
+                      location: event.mapPoint,
+                      features: [graphic],
+                    });
 
-                  if (ward) {
-                    if (view.popup) {
-                      view.popup.close();
-                    }
-
-                    const exposure = ward.population_density / 1000 + ward.rainfall / 200;
-                    const susceptibility = ward.low_elevation + ward.urban_land;
-                    const resilience = ward.drainage_capacity || 1;
-                    const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
-                    const riskLevel = getRiskLevel(floodRisk);
-                    const levelLabel = getRiskLevelLabel(riskLevel);
-
+                    // Set state cho WardDetailPanel với dữ liệu từ attributes
                     setSelectedWardDetail({
-                      ward_name: ward.ward_name,
-                      flood_risk: floodRisk,
-                      risk_level: levelLabel,
-                      population_density: ward.population_density,
-                      rainfall: ward.rainfall,
-                      low_elevation: ward.low_elevation,
-                      urban_land: ward.urban_land,
-                      drainage_capacity: ward.drainage_capacity,
-                      exposure: exposure,
-                      susceptibility: susceptibility,
-                      resilience: resilience,
+                      ward_name: attributes.ward_name,
+                      flood_risk: attributes.flood_risk,
+                      risk_level: attributes.risk_level,
+                      population_density: attributes.population_density,
+                      rainfall: attributes.rainfall,
+                      low_elevation: attributes.low_elevation,
+                      urban_land: attributes.urban_land,
+                      drainage_capacity: attributes.drainage_capacity,
+                      exposure: attributes.exposure,
+                      susceptibility: attributes.susceptibility,
+                      resilience: attributes.resilience,
                     });
 
                     view
@@ -238,7 +274,7 @@ export default function FloodMapView({
         clickHandle.remove();
       }
     };
-  }, []);
+  }, [wards]);
 
   useEffect(() => {
     if (!wardLayerRef.current || wards.length === 0) return;
@@ -246,15 +282,25 @@ export default function FloodMapView({
     wardLayerRef.current.removeAll();
 
     const filteredWards = wards.filter((ward) => {
-      const exposure = ward.population_density / 1000 + ward.rainfall / 200;
-      const susceptibility = ward.low_elevation + ward.urban_land;
-      const resilience = ward.drainage_capacity || 1;
-      const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      // Tính toán flood_risk nếu chưa có trong database
+      let floodRisk: number;
+      if (ward.flood_risk !== undefined) {
+        floodRisk = ward.flood_risk;
+      } else {
+        const exposure = ward.population_density / 1000 + ward.rainfall / 200;
+        const susceptibility = ward.low_elevation + ward.urban_land;
+        const resilience = ward.drainage_capacity || 1;
+        floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      }
 
-      // Only filter by risk index range (ward and risk level filtering is done by API)
+      // Filter by risk index range
       const matchesRiskIndex = floodRisk >= riskIndexRange[0] && floodRisk <= riskIndexRange[1];
 
-      return matchesRiskIndex;
+      // Kiểm tra geometry hợp lệ
+      const rings = convertGeoJSONToRings(ward.geometry);
+      const hasValidGeometry = rings && rings.length > 0;
+
+      return matchesRiskIndex && hasValidGeometry;
     });
 
     if (onFilteredCountChange) {
@@ -266,16 +312,99 @@ export default function FloodMapView({
       const susceptibility = ward.low_elevation + ward.urban_land;
       const resilience = ward.drainage_capacity || 1;
 
-      const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
+      // Sử dụng flood_risk từ database nếu có, nếu không thì tính toán
+      const floodRisk = ward.flood_risk !== undefined 
+        ? ward.flood_risk 
+        : calcFloodRiskIndex(exposure, susceptibility, resilience);
       const riskLevel = getRiskLevel(floodRisk);
       const color = getRiskColor(riskLevel);
       const outlineColor = getRiskOutlineColor(riskLevel);
       const levelLabel = getRiskLevelLabel(riskLevel);
+      const rgbColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+
+      // Convert geometry từ GeoJSON sang ArcGIS format
+      const rings = convertGeoJSONToRings(ward.geometry);
+      
+      // Bỏ qua nếu không có rings hợp lệ
+      if (!rings || rings.length === 0) {
+        console.warn(`Ward ${ward.ward_name} has no valid geometry`);
+        return;
+      }
 
       const polygon = new Polygon({
-        rings: ward.geometry.rings,
+        rings: rings,
         spatialReference: { wkid: 4326 },
       });
+
+      // Tạo popup content sẵn để không phải tính lại mỗi lần click
+      const popupContent = `
+        <div style="min-width: 300px; font-family: system-ui, -apple-system, sans-serif;">
+          <div style="margin-bottom: 16px;">
+            <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #1f2937;">
+              ${ward.ward_name}
+            </h2>
+            ${ward.district ? `<p style="margin: 0; color: #6b7280; font-size: 14px;">${ward.district}</p>` : ''}
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+            <div style="width: 24px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); background: ${rgbColor};"></div>
+            <div>
+              <div style="font-size: 12px; color: #6b7280;">Mức độ rủi ro</div>
+              <div style="font-size: 16px; font-weight: 600; color: #1f2937;">${levelLabel}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Chỉ số rủi ro</div>
+              <div style="font-size: 18px; font-weight: 600; color: #1f2937;">${floodRisk.toFixed(2)}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Mật độ dân số</div>
+              <div style="font-size: 18px; font-weight: 600; color: #1f2937;">${ward.population_density.toLocaleString('vi-VN')}</div>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+              <div>
+                <span style="color: #6b7280;">Lượng mưa:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${ward.rainfall.toFixed(1)} mm</span>
+              </div>
+              <div>
+                <span style="color: #6b7280;">Độ cao thấp:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${ward.low_elevation.toFixed(1)} m</span>
+              </div>
+              <div>
+                <span style="color: #6b7280;">Đất đô thị:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${ward.urban_land.toFixed(1)}%</span>
+              </div>
+              <div>
+                <span style="color: #6b7280;">Khả năng thoát nước:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${ward.drainage_capacity.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">Chỉ số thành phần:</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 12px;">
+              <div>
+                <span style="color: #6b7280;">Exposure:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${exposure.toFixed(2)}</span>
+              </div>
+              <div>
+                <span style="color: #6b7280;">Susceptibility:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${susceptibility.toFixed(2)}</span>
+              </div>
+              <div>
+                <span style="color: #6b7280;">Resilience:</span>
+                <span style="font-weight: 500; color: #1f2937; margin-left: 4px;">${resilience.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
 
       const graphic = new Graphic({
         geometry: polygon,
@@ -283,6 +412,7 @@ export default function FloodMapView({
           ward_name: ward.ward_name,
           flood_risk: floodRisk,
           risk_level: levelLabel,
+          risk_level_key: riskLevel,
           population_density: ward.population_density,
           rainfall: ward.rainfall,
           low_elevation: ward.low_elevation,
@@ -291,6 +421,8 @@ export default function FloodMapView({
           exposure: exposure,
           susceptibility: susceptibility,
           resilience: resilience,
+          district: ward.district || '',
+          popup_content: popupContent, // Lưu popup content sẵn
         },
         symbol: {
           type: 'simple-fill',

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTachometerAlt,
@@ -8,27 +9,33 @@ import {
   FaSignOutAlt,
   FaMapMarkedAlt,
 } from 'react-icons/fa';
+import { IoIosPrint } from 'react-icons/io';
+import { IoMdPerson } from 'react-icons/io';
 import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/logo.jpg';
 import {
   ADMIN_PATH,
-  HOME_PATH,
-  RISK_REPORT_PATH,
-  SETTINGS_PATH,
   LOGIN_PATH,
   ADMIN_DATA_MANAGEMENT_PATH,
   ADMIN_USER_MANAGEMENT_PATH,
   ADMIN_STATISTICS_PATH,
+  ADMIN_PAGE_VIEW_PATH,
+  ADMIN_RISK_REPORT_PATH,
+  ADMIN_USER_PROFILE_PATH,
+  ADMIN_SETTINGS_PATH,
+
 } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
+import ExportDataModal from '../../../pages/PageView/Partials/ExportDataModal';
 
 export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === ADMIN_PATH) {
@@ -42,9 +49,8 @@ export default function AdminSidebar() {
       ? theme === 'light'
         ? 'bg-indigo-600 text-white font-medium'
         : 'bg-indigo-600 text-white font-medium'
-      : `${themeClasses.text} ${
-          theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'
-        }`;
+      : `${themeClasses.text} ${theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'
+      }`;
   };
 
   const handleLogout = () => {
@@ -59,20 +65,12 @@ export default function AdminSidebar() {
       {/* Logo/Header */}
       <div className={`p-6 border-b ${themeClasses.border}`}>
         <div className='flex items-center gap-3 mb-2'>
-          <img src={logo} className='w-10 h-10 rounded-lg' alt='Logo' />
+          <img src={logo} className='w-15 h-10 rounded-lg' alt='Logo' />
           <div>
             <h1 className={`text-lg font-bold ${themeClasses.text}`}>Admin Panel</h1>
             <p className={`text-xs ${themeClasses.textSecondary}`}>Quản trị hệ thống</p>
           </div>
         </div>
-        {user && (
-          <div className={`mt-3 pt-3 border-t ${themeClasses.border}`}>
-            <p className={`text-xs ${themeClasses.textSecondary}`}>Đăng nhập bởi</p>
-            <p className={`text-sm font-medium ${themeClasses.text} mt-1`}>
-              {user.username || user.email}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Navigation Menu */}
@@ -88,9 +86,9 @@ export default function AdminSidebar() {
         </Link>
 
         <Link
-          to={HOME_PATH}
+          to={ADMIN_PAGE_VIEW_PATH}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
-            HOME_PATH
+            ADMIN_PAGE_VIEW_PATH
           )}`}
         >
           <FaMapMarkedAlt size={20} />
@@ -98,9 +96,9 @@ export default function AdminSidebar() {
         </Link>
 
         <Link
-          to={RISK_REPORT_PATH}
+          to={ADMIN_RISK_REPORT_PATH}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
-            RISK_REPORT_PATH
+            ADMIN_RISK_REPORT_PATH
           )}`}
         >
           <FaChartBar size={20} />
@@ -116,6 +114,16 @@ export default function AdminSidebar() {
           <FaChartLine size={20} />
           <span>Thống kê & Phân tích</span>
         </Link>
+
+        <button
+          onClick={() => setIsExportModalOpen(true)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${themeClasses.text
+            } ${theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'
+            }`}
+        >
+          <IoIosPrint size={20} />
+          <span>Xuất dữ liệu</span>
+        </button>
 
         <div className={`pt-4 mt-4 border-t ${themeClasses.border}`}>
           <div
@@ -145,13 +153,26 @@ export default function AdminSidebar() {
           </Link>
 
           <Link
-            to={SETTINGS_PATH}
+            to={ADMIN_SETTINGS_PATH}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
-              SETTINGS_PATH
+              ADMIN_SETTINGS_PATH
             )}`}
           >
             <FaCog size={20} />
             <span>Cài đặt</span>
+          </Link>
+        </div>
+
+        {/* User Options Section */}
+        <div className={`pt-4 mt-4 border-t ${themeClasses.border}`}>
+          <Link
+            to={ADMIN_USER_PROFILE_PATH}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
+              ADMIN_USER_PROFILE_PATH
+            )}`}
+          >
+            <IoMdPerson size={20} />
+            <span>Thông tin cá nhân</span>
           </Link>
         </div>
       </nav>
@@ -160,18 +181,19 @@ export default function AdminSidebar() {
       <div className={`p-4 border-t ${themeClasses.border}`}>
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            themeClasses.text
-          } ${
-            theme === 'light'
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${themeClasses.text
+            } ${theme === 'light'
               ? 'hover:bg-red-50 hover:text-red-600'
               : 'hover:bg-red-900/30 hover:text-red-400'
-          }`}
+            }`}
         >
           <FaSignOutAlt size={20} />
           <span>Đăng xuất</span>
         </button>
       </div>
+
+      {/* Export Data Modal */}
+      <ExportDataModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </aside>
   );
 }
