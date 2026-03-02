@@ -116,11 +116,17 @@ export default function IndicatorFormModal({
                   direction: Number(e.target.value) as 0 | 1,
                 }))
               }
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500 ${themeClasses.input} ${themeClasses.border}`}
+              disabled={isEditMode}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500 ${themeClasses.input} ${themeClasses.border} ${isEditMode ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <option value={1}>Thuận</option>
               <option value={0}>Nghịch</option>
             </select>
+            {isEditMode && (
+              <p className={`text-xs mt-1 ${themeClasses.textSecondary}`}>
+                Không được sửa khi chỉnh sửa — thay đổi sẽ ảnh hưởng đến chuẩn hóa dữ liệu.
+              </p>
+            )}
           </div>
         </div>
       </div>

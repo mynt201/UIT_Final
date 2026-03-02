@@ -43,7 +43,7 @@ export const indicatorValueService = {
     indicator_id: string;
     data_year: number;
     raw_value: number;
-    normalized_value: number;
+    normalized_value?: number; // BE tự tính theo min-max và direction
   }) {
     const res = await api.post('/indicator-values', payload);
     return res.data as { success: boolean; data: IndicatorValueRecord };
@@ -68,7 +68,7 @@ export const indicatorValueService = {
       indicator_id: string;
       data_year: number;
       raw_value: number;
-      normalized_value: number;
+      normalized_value?: number; // BE tự tính theo min-max và direction
     }>
   ) {
     const res = await api.post('/indicator-values/bulk-upsert', { items });

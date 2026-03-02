@@ -1,4 +1,4 @@
-import WardManagementPage from "./WardManagementPage";
+import WardManagementPage from './WardManagement/Index';
 
 const DataManagementPage = () => {
   return <WardManagementPage />;

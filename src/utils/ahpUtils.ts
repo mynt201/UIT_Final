@@ -72,7 +72,7 @@ export function setMatrixCell(
   value: number
 ): number[][] {
   const next = matrix.map((row) => [...row]);
-  const v = Math.max(0.111, Math.min(9, value));
+  const v = Math.max(0.11, Math.min(9, value));
   next[i][j] = v;
   next[j][i] = i === j ? 1 : parseFloat((1 / v).toFixed(4));
   return next;
