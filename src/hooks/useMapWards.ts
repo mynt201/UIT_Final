@@ -20,8 +20,8 @@ function transformGeoJSONToWards(
       low_elevation: 0,
       urban_land: 0,
       drainage_capacity: 1,
-      flood_risk: props.total_score ?? 0,
-      risk_level: props.risk_level || "Trung bình",
+      flood_risk: props.total_score ?? undefined,
+      risk_level: props.risk_level || "Chưa có dữ liệu",
     };
   });
 }

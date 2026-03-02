@@ -1,40 +1,40 @@
-import { useState, useMemo } from 'react';
-import { FaMapMarkedAlt, FaEdit, FaTrash } from 'react-icons/fa';
-import { useTheme } from '../../../contexts/ThemeContext';
-import { getThemeClasses } from '../../../utils/themeUtils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
-import { useAuth } from '../../../contexts/AuthContext';
-import { UserRole } from '../../../constants/roles';
+import { useState, useMemo, useEffect } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { getThemeClasses } from "../../../utils/themeUtils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { useAuth } from "../../../contexts/AuthContext";
+import { UserRole } from "../../../constants/roles";
 import {
   administrativeUnitService,
   type AdministrativeUnit,
   type AdministrativeUnitCreatePayload,
-} from '../../../services/administrativeUnitService';
+} from "../../../services/administrativeUnitService";
 import {
   indicatorValueService,
   floodIndicatorService,
   type IndicatorValueRecord,
   type FloodIndicator,
-} from '../../../services/indicatorValueService';
-import { riskAssessmentService } from '../../../services/riskAssessmentService';
-import { formatNumber } from '../../../utils/formatUtils';
-import { getIndicatorLabel } from '../../../utils/indicatorLabels';
-import { createEmptyAHPMatrix } from '../../../utils/ahpUtils';
+} from "../../../services/indicatorValueService";
+import { riskAssessmentService } from "../../../services/riskAssessmentService";
+import { formatNumber } from "../../../utils/formatUtils";
+import { getIndicatorLabel } from "../../../utils/indicatorLabels";
+import { createEmptyAHPMatrix } from "../../../utils/ahpUtils";
 
-import type { WardYearIndicatorRow, IndicatorCell } from './types';
-import { LEGACY_AHP_ORDER } from './constants';
-import { extractCenterFromGeom } from './utils';
+import type { WardYearIndicatorRow, IndicatorCell } from "./types";
+import { LEGACY_AHP_ORDER } from "./constants";
+import { extractCenterFromGeom } from "./utils";
 
-import WardListPanel from './Partials/WardListPanel';
-import WardFormModal, { type WardFormData } from './Partials/WardFormModal';
-import WardDeleteModal from './Partials/WardDeleteModal';
-import IndicatorTablePanel from './Partials/IndicatorTablePanel';
-import WardIndicatorFormModal from './Partials/WardIndicatorFormModal';
-import WardIndicatorDeleteModal from './Partials/WardIndicatorDeleteModal';
-import AhpMatrixModal from './Partials/AhpMatrixModal';
-import { DEFAULT_AHP_MATRIX_5 } from './constants';
-import { Button } from '../../../components';
+import WardListPanel from "./Partials/WardListPanel";
+import WardFormModal, { type WardFormData } from "./Partials/WardFormModal";
+import WardDeleteModal from "./Partials/WardDeleteModal";
+import IndicatorTablePanel from "./Partials/IndicatorTablePanel";
+import WardIndicatorFormModal from "./Partials/WardIndicatorFormModal";
+import WardIndicatorDeleteModal from "./Partials/WardIndicatorDeleteModal";
+import AhpMatrixModal from "./Partials/AhpMatrixModal";
+import { DEFAULT_AHP_MATRIX_5 } from "./constants";
+import { Button } from "../../../components";
 
 export default function WardManagementPage() {
   const queryClient = useQueryClient();
@@ -42,28 +42,42 @@ export default function WardManagementPage() {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
   const isSuperAdmin = (currentUser?.role as string) === UserRole.SUPER_ADMIN;
+  const isWardAdmin = (currentUser?.role as string) === UserRole.WARD_ADMIN;
+  const wardAdminUnitId =
+    (currentUser as { ward_id?: string })?.ward_id ?? null;
 
   // Ward state
   const [wardPagination, setWardPagination] = useState({ page: 1, limit: 8 });
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
   const [wardModalOpen, setWardModalOpen] = useState(false);
-  const [editingWard, setEditingWard] = useState<AdministrativeUnit | null>(null);
-  const [wardToDelete, setWardToDelete] = useState<AdministrativeUnit | null>(null);
+  const [editingWard, setEditingWard] = useState<AdministrativeUnit | null>(
+    null,
+  );
+  const [wardToDelete, setWardToDelete] = useState<AdministrativeUnit | null>(
+    null,
+  );
   const [wardForm, setWardForm] = useState<WardFormData>({
-    name: '',
+    name: "",
     area_km2: 0,
-    coordinates: '',
+    coordinates: "",
   });
   const [wardErrors, setWardErrors] = useState<Record<string, string>>({});
 
   // Indicator state
-  const [indicatorPagination, setIndicatorPagination] = useState({ page: 1, limit: 8 });
-  const [yearFilter, setYearFilter] = useState<number | ''>('');
+  const [indicatorPagination, setIndicatorPagination] = useState({
+    page: 1,
+    limit: 8,
+  });
+  const [yearFilter, setYearFilter] = useState<number | "">("");
   const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
-  const [editingIndicatorRow, setEditingIndicatorRow] = useState<WardYearIndicatorRow | null>(null);
-  const [indicatorToDelete, setIndicatorToDelete] = useState<WardYearIndicatorRow | null>(null);
-  const [indicatorForm, setIndicatorForm] = useState<Record<string, string | number>>({
-    unit_id: '',
+  const [editingIndicatorRow, setEditingIndicatorRow] =
+    useState<WardYearIndicatorRow | null>(null);
+  const [indicatorToDelete, setIndicatorToDelete] =
+    useState<WardYearIndicatorRow | null>(null);
+  const [indicatorForm, setIndicatorForm] = useState<
+    Record<string, string | number>
+  >({
+    unit_id: "",
     data_year: new Date().getFullYear(),
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -81,7 +95,12 @@ export default function WardManagementPage() {
     isLoading: loadingWards,
     refetch: refetchWards,
   } = useQuery({
-    queryKey: ['administrative-units', 'management', wardPagination.page, wardPagination.limit],
+    queryKey: [
+      "administrative-units",
+      "management",
+      wardPagination.page,
+      wardPagination.limit,
+    ],
     queryFn: () =>
       administrativeUnitService.getUnits({
         page: wardPagination.page,
@@ -90,12 +109,12 @@ export default function WardManagementPage() {
   });
 
   const { data: allUnitsData } = useQuery({
-    queryKey: ['administrative-units', 'all'],
+    queryKey: ["administrative-units", "all"],
     queryFn: () => administrativeUnitService.getAllUnits(),
   });
 
   const { data: indicatorsData } = useQuery({
-    queryKey: ['flood-indicators'],
+    queryKey: ["flood-indicators"],
     queryFn: () => floodIndicatorService.getIndicators(),
   });
 
@@ -104,7 +123,7 @@ export default function WardManagementPage() {
     isLoading: loadingIndicators,
     refetch: refetchIndicators,
   } = useQuery({
-    queryKey: ['indicator-values', yearFilter, selectedWardId],
+    queryKey: ["indicator-values", yearFilter, selectedWardId],
     queryFn: () => {
       const params: { year?: number; unit_id?: string } = {};
       if (yearFilter) params.year = Number(yearFilter);
@@ -113,15 +132,44 @@ export default function WardManagementPage() {
     },
   });
 
-  const wards: AdministrativeUnit[] = wardsData?.data ?? [];
-  const allUnits = allUnitsData?.data ?? [];
+  const allUnitsRaw = allUnitsData?.data ?? [];
+  const allUnits = useMemo(() => {
+    if (isWardAdmin && wardAdminUnitId) {
+      return allUnitsRaw.filter((u) => u._id === wardAdminUnitId);
+    }
+    return allUnitsRaw;
+  }, [allUnitsRaw, isWardAdmin, wardAdminUnitId]);
+
+  const wards: AdministrativeUnit[] = useMemo(() => {
+    const data = wardsData?.data ?? [];
+    if (isWardAdmin && wardAdminUnitId) {
+      return data.filter((u) => u._id === wardAdminUnitId);
+    }
+    return data;
+  }, [wardsData?.data, isWardAdmin, wardAdminUnitId]);
+
+  useEffect(() => {
+    if (isWardAdmin && wardAdminUnitId && allUnits.length > 0) {
+      if (!selectedWardId) setSelectedWardId(wardAdminUnitId);
+      if (yearFilter === "") setYearFilter(new Date().getFullYear());
+    }
+  }, [
+    isWardAdmin,
+    wardAdminUnitId,
+    allUnits.length,
+    selectedWardId,
+    yearFilter,
+  ]);
   const indicators: FloodIndicator[] = indicatorsData?.data ?? [];
   const values: IndicatorValueRecord[] = valuesData?.data ?? [];
 
-  const indicatorCodes = useMemo(() => indicators.map((i) => i.code).sort(), [indicators]);
+  const indicatorCodes = useMemo(
+    () => indicators.map((i) => i.code).sort(),
+    [indicators],
+  );
   const indicatorUnitFallback = useMemo(
-    () => Object.fromEntries(indicators.map((i) => [i.code, i.unit ?? ''])),
-    [indicators]
+    () => Object.fromEntries(indicators.map((i) => [i.code, i.unit ?? ""])),
+    [indicators],
   );
 
   const indicatorsInAHOrder = useMemo(() => {
@@ -160,16 +208,22 @@ export default function WardManagementPage() {
   const groupedIndicatorRows: WardYearIndicatorRow[] = useMemo(() => {
     const map = new Map<string, WardYearIndicatorRow>();
     for (const v of values) {
-      const uid = typeof v.unit_id === 'object' ? v.unit_id._id : v.unit_id;
+      const uid = typeof v.unit_id === "object" ? v.unit_id._id : v.unit_id;
       const code =
-        typeof v.indicator_id === 'object' ? (v.indicator_id as { code: string }).code : '';
+        typeof v.indicator_id === "object"
+          ? (v.indicator_id as { code: string }).code
+          : "";
       const unitName =
-        typeof v.unit_id === 'object'
+        typeof v.unit_id === "object"
           ? (v.unit_id as { name: string }).name
-          : unitIdToName[uid] ?? uid;
+          : (unitIdToName[uid] ?? uid);
       const key = `${uid}|${v.data_year}`;
       if (!map.has(key)) {
-        map.set(key, { unit_id: uid, unit_name: unitName, data_year: v.data_year });
+        map.set(key, {
+          unit_id: uid,
+          unit_name: unitName,
+          data_year: v.data_year,
+        });
       }
       const row = map.get(key)!;
       if (indicatorCodes.includes(code)) {
@@ -181,7 +235,8 @@ export default function WardManagementPage() {
       }
     }
     return Array.from(map.values()).sort(
-      (a, b) => b.data_year - a.data_year || a.unit_name.localeCompare(b.unit_name)
+      (a, b) =>
+        b.data_year - a.data_year || a.unit_name.localeCompare(b.unit_name),
     );
   }, [values, unitIdToName, indicatorCodes]);
 
@@ -192,7 +247,7 @@ export default function WardManagementPage() {
 
   const indicatorPages = Math.max(
     1,
-    Math.ceil(groupedIndicatorRows.length / indicatorPagination.limit)
+    Math.ceil(groupedIndicatorRows.length / indicatorPagination.limit),
   );
 
   const indicatorTableColumns = useMemo(() => {
@@ -201,35 +256,40 @@ export default function WardManagementPage() {
       accessor: keyof WardYearIndicatorRow | string;
       render?: (value: unknown, row: WardYearIndicatorRow) => React.ReactNode;
     }> = [
-      { header: 'Phường', accessor: 'unit_name' },
-      { header: 'Năm', accessor: 'data_year' },
+      { header: "Phường", accessor: "unit_name" },
+      { header: "Năm", accessor: "data_year" },
       ...indicatorCodes.map((c) => {
         const ind = indicators.find((i) => i.code === c);
         const indOrCode = ind ?? { code: c };
         const unit = ind?.unit ?? indicatorUnitFallback[c];
-        const unitStr = unit ? ` (${unit})` : '';
+        const unitStr = unit ? ` (${unit})` : "";
         const dir = ind?.direction ?? 1;
         return {
-          header: `${getIndicatorLabel(indOrCode)}${unitStr} [${dir === 0 ? 'Nghịch' : 'Thuận'}]`,
+          header: `${getIndicatorLabel(indOrCode)}${unitStr} [${dir === 0 ? "Nghịch" : "Thuận"}]`,
           accessor: c,
           render: (_value: unknown, row: WardYearIndicatorRow) => {
             const v = row[c] as IndicatorCell | undefined;
-            if (v == null) return '-';
+            if (v == null) return "-";
             const uStr =
-              ind?.unit ?? indicatorUnitFallback[c]
+              (ind?.unit ?? indicatorUnitFallback[c])
                 ? ` ${ind?.unit ?? indicatorUnitFallback[c]}`
-                : '';
+                : "";
             return (
-              <div className='text-center'>
-                <div className='font-medium'>
+              <div className="text-center">
+                <div className="font-medium">
                   {formatNumber(v.raw_value)}
                   {uStr && (
-                    <span className={`text-xs font-normal ${themeClasses.textSecondary}`}>
+                    <span
+                      className={`text-xs font-normal ${themeClasses.textSecondary}`}
+                    >
                       {uStr}
                     </span>
                   )}
                 </div>
-                <div className={`text-xs ${themeClasses.textSecondary}`} title='Chuẩn hóa'>
+                <div
+                  className={`text-xs ${themeClasses.textSecondary}`}
+                  title="Chuẩn hóa"
+                >
                   Giá trị chuẩn hóa → {v.normalized_value.toFixed(2)}
                 </div>
               </div>
@@ -240,12 +300,12 @@ export default function WardManagementPage() {
     ];
     if (isSuperAdmin) {
       cols.push({
-        header: 'Thao tác',
-        accessor: '_actions',
+        header: "Thao tác",
+        accessor: "_actions",
         render: (_: unknown, row: WardYearIndicatorRow) => (
-          <div className='flex justify-end gap-1'>
+          <div className="flex justify-end gap-1">
             <Button
-              variant='primary'
+              variant="primary"
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingIndicatorRow(row);
@@ -260,17 +320,17 @@ export default function WardManagementPage() {
                 setIndicatorForm(base);
                 setIndicatorModalOpen(true);
               }}
-              className='rounded text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400'
+              className="rounded text-indigo-600 hover:bg-indigo-100 dark:text-indigo-400"
             >
               <FaEdit size={12} />
             </Button>
             <Button
-              variant='danger'
+              variant="danger"
               onClick={(e) => {
                 e.stopPropagation();
                 setIndicatorToDelete(row);
               }}
-              className='rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30'
+              className="rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
             >
               <FaTrash size={12} />
             </Button>
@@ -279,38 +339,50 @@ export default function WardManagementPage() {
       });
     }
     return cols;
-  }, [indicatorCodes, indicators, indicatorUnitFallback, isSuperAdmin, themeClasses.textSecondary]);
+  }, [
+    indicatorCodes,
+    indicators,
+    indicatorUnitFallback,
+    isSuperAdmin,
+    themeClasses.textSecondary,
+  ]);
 
   // Mutations
   const createWardMut = useMutation({
-    mutationFn: (p: AdministrativeUnitCreatePayload) => administrativeUnitService.createUnit(p),
+    mutationFn: (p: AdministrativeUnitCreatePayload) =>
+      administrativeUnitService.createUnit(p),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['administrative-units'] });
-      toast.success('Thêm phường thành công!');
+      queryClient.invalidateQueries({ queryKey: ["administrative-units"] });
+      toast.success("Thêm phường thành công!");
       setWardModalOpen(false);
-      setWardForm({ name: '', area_km2: 0, coordinates: '' });
+      setWardForm({ name: "", area_km2: 0, coordinates: "" });
     },
     onError: (e: unknown) => {
       toast.error(
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-          'Lỗi khi thêm phường'
+        (e as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Lỗi khi thêm phường",
       );
     },
   });
 
   const updateWardMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: AdministrativeUnitCreatePayload }) =>
-      administrativeUnitService.updateUnit(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: AdministrativeUnitCreatePayload;
+    }) => administrativeUnitService.updateUnit(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['administrative-units'] });
-      toast.success('Cập nhật phường thành công!');
+      queryClient.invalidateQueries({ queryKey: ["administrative-units"] });
+      toast.success("Cập nhật phường thành công!");
       setWardModalOpen(false);
       setEditingWard(null);
     },
     onError: (e: unknown) => {
       toast.error(
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-          'Lỗi khi cập nhật'
+        (e as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Lỗi khi cập nhật",
       );
     },
   });
@@ -318,30 +390,34 @@ export default function WardManagementPage() {
   const deleteWardMut = useMutation({
     mutationFn: (id: string) => administrativeUnitService.deleteUnit(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['administrative-units'] });
-      toast.success('Đã xóa phường.');
+      queryClient.invalidateQueries({ queryKey: ["administrative-units"] });
+      toast.success("Đã xóa phường.");
       setWardToDelete(null);
-      if (wardToDelete && selectedWardId === wardToDelete._id) setSelectedWardId(null);
+      if (wardToDelete && selectedWardId === wardToDelete._id)
+        setSelectedWardId(null);
     },
     onError: (e: unknown) => {
       toast.error(
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Lỗi khi xóa'
+        (e as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Lỗi khi xóa",
       );
     },
   });
 
   const bulkUpsertIndicators = useMutation({
-    mutationFn: (items: Parameters<typeof indicatorValueService.bulkUpsert>[0]) =>
-      indicatorValueService.bulkUpsert(items),
+    mutationFn: (
+      items: Parameters<typeof indicatorValueService.bulkUpsert>[0],
+    ) => indicatorValueService.bulkUpsert(items),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indicator-values'] });
-      toast.success('Đã lưu chỉ số!');
+      queryClient.invalidateQueries({ queryKey: ["indicator-values"] });
+      toast.success("Đã lưu chỉ số!");
       setIndicatorModalOpen(false);
       setEditingIndicatorRow(null);
     },
     onError: (e: unknown) => {
       toast.error(
-        (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Lỗi khi lưu'
+        (e as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Lỗi khi lưu",
       );
     },
   });
@@ -351,8 +427,8 @@ export default function WardManagementPage() {
       for (const id of ids) await indicatorValueService.deleteValue(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indicator-values'] });
-      toast.success('Đã xóa chỉ số.');
+      queryClient.invalidateQueries({ queryKey: ["indicator-values"] });
+      toast.success("Đã xóa chỉ số.");
       setIndicatorToDelete(null);
     },
   });
@@ -361,31 +437,42 @@ export default function WardManagementPage() {
     mutationFn: (items: Array<{ code: string; weight: number }>) =>
       floodIndicatorService.updateWeights(items),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['flood-indicators'] });
-      toast.success('Đã lưu trọng số AHP!');
+      queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
+      toast.success("Đã lưu trọng số AHP!");
       setAhpModalOpen(false);
     },
     onError: (e: unknown) => {
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err?.response?.data?.error || err?.message || 'Lỗi khi lưu trọng số');
+      const err = e as {
+        response?: { data?: { error?: string } };
+        message?: string;
+      };
+      toast.error(
+        err?.response?.data?.error || err?.message || "Lỗi khi lưu trọng số",
+      );
     },
   });
 
   const refreshAssessmentsMut = useMutation({
-    mutationFn: (year?: number) => riskAssessmentService.refreshAssessments(year),
+    mutationFn: (year?: number) =>
+      riskAssessmentService.refreshAssessments(year),
     onSuccess: (data) => {
-      toast.success(data.message || 'Đã tính lại đánh giá rủi ro!');
+      toast.success(data.message || "Đã tính lại đánh giá rủi ro!");
     },
     onError: (e: unknown) => {
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
-      toast.error(err?.response?.data?.error || err?.message || 'Lỗi khi tính đánh giá');
+      const err = e as {
+        response?: { data?: { error?: string } };
+        message?: string;
+      };
+      toast.error(
+        err?.response?.data?.error || err?.message || "Lỗi khi tính đánh giá",
+      );
     },
   });
 
   // Handlers
   const handleWardFormSubmit = (
     data: WardFormData,
-    geom: NonNullable<AdministrativeUnitCreatePayload['geom']>
+    geom: NonNullable<AdministrativeUnitCreatePayload["geom"]>,
   ) => {
     const payload = {
       name: data.name.trim(),
@@ -401,7 +488,7 @@ export default function WardManagementPage() {
 
   const handleOpenWardAdd = () => {
     setEditingWard(null);
-    setWardForm({ name: '', area_km2: 0, coordinates: '' });
+    setWardForm({ name: "", area_km2: 0, coordinates: "" });
     setWardErrors({});
     setWardModalOpen(true);
   };
@@ -412,25 +499,26 @@ export default function WardManagementPage() {
     setWardForm({
       name: ward.name,
       area_km2: ward.area_km2 ?? 0,
-      coordinates: c ? `${c[0]}, ${c[1]}` : '',
+      coordinates: c ? `${c[0]}, ${c[1]}` : "",
     });
     setWardModalOpen(true);
   };
 
   const handleIndicatorSubmit = () => {
     if (!indicatorForm.unit_id) {
-      toast.error('Chọn phường');
+      toast.error("Chọn phường");
       return;
     }
     if (indicatorCodes.length === 0) {
-      toast.error('Chưa có chỉ số. Thêm chỉ số trong Quản lý chỉ số trước.');
+      toast.error("Chưa có chỉ số. Thêm chỉ số trong Quản lý chỉ số trước.");
       return;
     }
     const items = indicatorCodes
       .filter((c) => codeToId[c])
       .map((c) => {
         const val = indicatorForm[c];
-        const raw = val === undefined || val === null || val === '' ? 0 : Number(val);
+        const raw =
+          val === undefined || val === null || val === "" ? 0 : Number(val);
         const num = isNaN(raw) ? 0 : raw;
         return {
           unit_id: String(indicatorForm.unit_id),
@@ -451,28 +539,67 @@ export default function WardManagementPage() {
     return ids;
   };
 
+  const handleDownloadTemplate = async () => {
+    const unitId = selectedWardId ?? (isWardAdmin ? wardAdminUnitId : null);
+    if (!unitId) {
+      toast.error("Chọn 1 phường trước khi tải template");
+      return;
+    }
+    const year = yearFilter !== "" ? yearFilter : "all";
+    try {
+      await indicatorValueService.downloadTemplate(unitId, year);
+      toast.success("Đã tải xuống template");
+    } catch {
+      toast.error("Không thể tải template");
+    }
+  };
+
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (!f || !isSuperAdmin) return;
+    if (!f) return;
+    const targetUnitId =
+      selectedWardId ?? (isWardAdmin ? wardAdminUnitId : null);
+    if (!targetUnitId) {
+      toast.error("Chọn 1 phường trước khi upload");
+      return;
+    }
+    if (isWardAdmin && !wardAdminUnitId) {
+      toast.error("Bạn chưa được gán phường. Liên hệ Super Admin.");
+      return;
+    }
     setIsUploading(true);
     try {
       const text = await f.text();
       const lines = text
-        .replace(/^\uFEFF/, '')
+        .replace(/^\uFEFF/, "")
         .trim()
-        .split('\n');
+        .split("\n");
       if (lines.length < 2) {
-        toast.error('File không có dữ liệu');
+        toast.error("File không có dữ liệu");
         return;
       }
-      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
-      const unitIdx = headers.findIndex((h) => h.includes('unit') || h === 'mã phường');
-      const yearIdx = headers.findIndex((h) => h.includes('year') || h.includes('năm'));
-      const idxs = indicatorCodes.map((c) =>
-        headers.findIndex((h) => h === c.toLowerCase() || h.includes(c.toLowerCase()))
+      const unquote = (s: string) =>
+        String(s)
+          .trim()
+          .replace(/^"+|"+$/g, "")
+          .replace(/""/g, '"');
+      const rawHeaders = lines[0].split(",").map((h) => unquote(h));
+      const headersLower = rawHeaders.map((h) => h.toLowerCase());
+      const yearIdx = headersLower.findIndex(
+        (h) => h.includes("year") || h.includes("năm"),
       );
-      const unitNameToId = Object.fromEntries(allUnits.map((u) => [u.name, u._id]));
-      const unitIdSet = new Set(allUnits.map((u) => u._id));
+      const idxs = indicatorCodes.map((c) => {
+        const codePattern = `[${c}]`;
+        const idxByCode = rawHeaders.findIndex(
+          (h) =>
+            h.includes(codePattern) ||
+            h.toLowerCase().includes(`[${c.toLowerCase()}]`),
+        );
+        if (idxByCode >= 0) return idxByCode;
+        return headersLower.findIndex(
+          (h) => h === c.toLowerCase() || h.includes(c.toLowerCase()),
+        );
+      });
       const items: Array<{
         unit_id: string;
         indicator_id: string;
@@ -481,17 +608,17 @@ export default function WardManagementPage() {
       }> = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(',').map((v) => v.trim());
-        const unitVal = unitIdx >= 0 ? vals[unitIdx] : '';
-        const unitId = unitIdSet.has(unitVal) ? unitVal : unitNameToId[unitVal] || unitVal;
-        const year = parseInt(yearIdx >= 0 ? vals[yearIdx] : '0') || new Date().getFullYear();
-        if (!unitId || !year) continue;
+        const vals = lines[i].split(",").map((v) => unquote(v));
+        const year =
+          parseInt(yearIdx >= 0 ? vals[yearIdx] : "0") ||
+          new Date().getFullYear();
+        if (!year) continue;
         indicatorCodes.forEach((code, c) => {
           const idx = idxs[c];
           if (idx < 0 || !codeToId[code]) return;
-          const raw = Math.max(0, parseFloat(vals[idx] || '0') || 0);
+          const raw = Math.max(0, parseFloat(vals[idx] || "0") || 0);
           items.push({
-            unit_id: unitId,
+            unit_id: targetUnitId,
             indicator_id: codeToId[code],
             data_year: year,
             raw_value: raw,
@@ -499,19 +626,20 @@ export default function WardManagementPage() {
         });
       }
       if (items.length === 0) {
-        toast.error('Không có dữ liệu hợp lệ');
+        toast.error("Không có dữ liệu hợp lệ");
         return;
       }
       await indicatorValueService.bulkUpsert(items);
-      const recordsCount = indicatorCodes.length > 0 ? items.length / indicatorCodes.length : 0;
+      const recordsCount =
+        indicatorCodes.length > 0 ? items.length / indicatorCodes.length : 0;
       toast.success(`Đã import ${recordsCount} bản ghi`);
-      queryClient.invalidateQueries({ queryKey: ['indicator-values'] });
+      queryClient.invalidateQueries({ queryKey: ["indicator-values"] });
     } catch (err) {
       console.error(err);
-      toast.error('Lỗi khi import CSV');
+      toast.error("Lỗi khi import CSV");
     } finally {
       setIsUploading(false);
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
@@ -530,7 +658,7 @@ export default function WardManagementPage() {
   const handleOpenIndicatorAdd = () => {
     setEditingIndicatorRow(null);
     const base: Record<string, string | number> = {
-      unit_id: selectedWardId ?? allUnits[0]?._id ?? '',
+      unit_id: selectedWardId ?? allUnits[0]?._id ?? "",
       data_year: new Date().getFullYear(),
     };
     indicatorCodes.forEach((c) => {
@@ -540,38 +668,35 @@ export default function WardManagementPage() {
     setIndicatorModalOpen(true);
   };
 
-  const selectedWardName = selectedWardId ? unitIdToName[selectedWardId] ?? 'Phường' : null;
+  const selectedWardName = selectedWardId
+    ? (unitIdToName[selectedWardId] ?? "Phường")
+    : null;
+
+  const handleWardChangeFromDropdown = (wardId: string | null) => {
+    setSelectedWardId(wardId);
+    setIndicatorPagination((p) => ({ ...p, page: 1 }));
+    if (wardId && allUnits.length > 0) {
+      const idx = allUnits.findIndex((u) => u._id === wardId);
+      if (idx >= 0) {
+        const targetPage = Math.min(
+          Math.max(1, Math.floor(idx / wardPagination.limit) + 1),
+          wardPaginationData.pages,
+        );
+        if (targetPage !== wardPagination.page) {
+          setWardPagination((p) => ({ ...p, page: targetPage }));
+        }
+      }
+    }
+  };
 
   return (
     <div
       className={`min-h-full ${themeClasses.background}`}
-      style={{ fontFamily: 'system-ui, sans-serif' }}
+      style={{ fontFamily: "system-ui, sans-serif" }}
     >
-      <div className='mb-8'>
-        <div className='flex items-center gap-3 mb-2'>
-          <div
-            className={`p-2 rounded-xl ${theme === 'light' ? 'bg-indigo-100' : 'bg-indigo-900/30'}`}
-          >
-            <FaMapMarkedAlt
-              className={theme === 'light' ? 'text-indigo-600' : 'text-indigo-400'}
-              size={28}
-            />
-          </div>
-          <div>
-            <h1 className={`text-2xl md:text-3xl font-bold ${themeClasses.text}`}>
-              Quản lý Phường & Chỉ số Rủi ro
-            </h1>
-            <p className={`text-sm mt-1 ${themeClasses.textSecondary}`}>
-              Quản lý danh sách phường và chỉ số rủi ro theo phường và năm (chỉ số lấy từ
-              flood_indicators)
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className='px-2 space-y-6'>
+      <div className="p-4 space-y-6">
         <WardListPanel
-          wards={wards}
+          wards={isWardAdmin ? allUnits : wards}
           loading={loadingWards}
           selectedWardId={selectedWardId}
           pagination={wardPagination}
@@ -597,17 +722,24 @@ export default function WardManagementPage() {
           pagination={indicatorPagination}
           totalPages={indicatorPages}
           isSuperAdmin={isSuperAdmin}
+          isWardAdmin={isWardAdmin}
+          canUseTemplateOrUpload={!!selectedWardId}
           isUploading={isUploading}
           isRefreshing={refreshAssessmentsMut.isPending}
-          onWardChange={setSelectedWardId}
+          onWardChange={handleWardChangeFromDropdown}
           onYearChange={setYearFilter}
           onRefresh={refetchIndicators}
-          onPageChange={(page) => setIndicatorPagination((p) => ({ ...p, page }))}
+          onPageChange={(page) =>
+            setIndicatorPagination((p) => ({ ...p, page }))
+          }
           onAdd={handleOpenIndicatorAdd}
           onAhpOpen={handleOpenAhp}
           onRefreshAssessments={() =>
-            refreshAssessmentsMut.mutate(yearFilter ? Number(yearFilter) : undefined)
+            refreshAssessmentsMut.mutate(
+              yearFilter ? Number(yearFilter) : undefined,
+            )
           }
+          onDownloadTemplate={handleDownloadTemplate}
           onCsvUpload={handleCsvUpload}
         />
       </div>
@@ -621,7 +753,7 @@ export default function WardManagementPage() {
         onClose={() => {
           setWardModalOpen(false);
           setEditingWard(null);
-          setWardForm({ name: '', area_km2: 0, coordinates: '' });
+          setWardForm({ name: "", area_km2: 0, coordinates: "" });
         }}
         onChange={setWardForm}
         onErrorsChange={setWardErrors}
@@ -660,7 +792,8 @@ export default function WardManagementPage() {
         loading={deleteIndicatorsMut.isPending}
         onClose={() => setIndicatorToDelete(null)}
         onConfirm={() =>
-          indicatorToDelete && deleteIndicatorsMut.mutate(collectIndicatorIds(indicatorToDelete))
+          indicatorToDelete &&
+          deleteIndicatorsMut.mutate(collectIndicatorIds(indicatorToDelete))
         }
       />
 

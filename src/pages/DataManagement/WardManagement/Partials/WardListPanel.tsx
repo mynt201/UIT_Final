@@ -113,7 +113,7 @@ export default function WardListPanel({
         {wards.length === 0 && !loading && (
           <p className={`text-center py-8 ${themeClasses.textSecondary}`}>Chưa có phường</p>
         )}
-        {paginationData.pages > 1 && (
+        {isSuperAdmin && paginationData.pages > 1 && (
           <div className='flex justify-center gap-2 mt-4'>
             <Button
               onClick={() => onPageChange(pagination.page - 1)}

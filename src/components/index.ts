@@ -5,6 +5,8 @@ export { default as Select } from "./ui/Select";
 export { default as Table } from "./ui/Table";
 export { default as Modal } from "./ui/Modal";
 export { default as FormSelect } from "./ui/FormSelect";
+export { default as Pagination } from "./ui/Pagination";
+export { default as StatCard } from "./ui/StatCard";
 export { default as FormCheckbox } from "./ui/FormCheckbox";
 
 // Layout Components

@@ -1,34 +1,30 @@
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaTachometerAlt,
   FaChartBar,
   FaChartLine,
   FaUsers,
   FaCog,
   FaSignOutAlt,
   FaMapMarkedAlt,
+  FaTable,
 } from 'react-icons/fa';
-import { IoIosPrint } from 'react-icons/io';
 import { IoMdPerson } from 'react-icons/io';
 import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/logo.jpg';
 import {
   ADMIN_PATH,
-  LOGIN_PATH,
+  HOME_PATH,
   ADMIN_DATA_MANAGEMENT_PATH,
   ADMIN_INDICATOR_MANAGEMENT_PATH,
   ADMIN_USER_MANAGEMENT_PATH,
-  ADMIN_STATISTICS_PATH,
   ADMIN_PAGE_VIEW_PATH,
   ADMIN_RISK_REPORT_PATH,
+  ADMIN_RISK_ASSESSMENT_MANAGEMENT_PATH,
   ADMIN_USER_PROFILE_PATH,
   ADMIN_SETTINGS_PATH,
-
 } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
-import ExportDataModal from '../../../pages/PageView/Partials/ExportDataModal';
 
 export default function AdminSidebar() {
   const location = useLocation();
@@ -36,7 +32,6 @@ export default function AdminSidebar() {
   const { logout } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === ADMIN_PATH) {
@@ -56,7 +51,7 @@ export default function AdminSidebar() {
 
   const handleLogout = () => {
     logout();
-    navigate(LOGIN_PATH);
+    navigate(HOME_PATH);
   };
 
   return (
@@ -77,16 +72,6 @@ export default function AdminSidebar() {
       {/* Navigation Menu */}
       <nav className='flex-1 p-4 space-y-2'>
         <Link
-          to={ADMIN_PATH}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
-            ADMIN_PATH
-          )}`}
-        >
-          <FaTachometerAlt size={20} />
-          <span>Dashboard</span>
-        </Link>
-
-        <Link
           to={ADMIN_PAGE_VIEW_PATH}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
             ADMIN_PAGE_VIEW_PATH
@@ -105,26 +90,6 @@ export default function AdminSidebar() {
           <FaChartBar size={20} />
           <span>Báo cáo rủi ro</span>
         </Link>
-
-        <Link
-          to={ADMIN_STATISTICS_PATH}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
-            ADMIN_STATISTICS_PATH
-          )}`}
-        >
-          <FaChartLine size={20} />
-          <span>Thống kê & Phân tích</span>
-        </Link>
-
-        <button
-          onClick={() => setIsExportModalOpen(true)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${themeClasses.text
-            } ${theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'
-            }`}
-        >
-          <IoIosPrint size={20} />
-          <span>Xuất dữ liệu</span>
-        </button>
 
         <div className={`pt-4 mt-4 border-t ${themeClasses.border}`}>
           <div
@@ -151,6 +116,16 @@ export default function AdminSidebar() {
           >
             <FaChartLine size={20} />
             <span>Quản lý chỉ số</span>
+          </Link>
+
+          <Link
+            to={ADMIN_RISK_ASSESSMENT_MANAGEMENT_PATH}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
+              ADMIN_RISK_ASSESSMENT_MANAGEMENT_PATH
+            )}`}
+          >
+            <FaTable size={20} />
+            <span>Quản lý đánh giá rủi ro</span>
           </Link>
 
           <Link
@@ -202,9 +177,6 @@ export default function AdminSidebar() {
           <span>Đăng xuất</span>
         </button>
       </div>
-
-      {/* Export Data Modal */}
-      <ExportDataModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </aside>
   );
 }

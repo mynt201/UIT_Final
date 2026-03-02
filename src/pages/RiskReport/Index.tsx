@@ -1,373 +1,501 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
-import { formatNumber } from "../../utils/formatUtils";
-import { Button } from "../../components";
-import { wardService } from "../../services/wardService";
-import type { WardData } from "../../types/ward";
+import { Button, Select, Table, Pagination, StatCard } from "../../components";
+import { reportService } from "../../services/reportService";
+import { useAuth } from "../../contexts/AuthContext";
+import { UserRole } from "../../constants/roles";
+import { ADMIN_PAGE_VIEW_PATH } from "../../router/routePath";
+import type { WardReportItem, ReportDashboardData } from "../../types/report";
+import {
+  FaFileExcel,
+  FaFilePdf,
+  FaMapMarkedAlt,
+  FaSpinner,
+  FaChartPie,
+} from "react-icons/fa";
 import toast from "react-hot-toast";
 
-type BackendRiskLevel = "Very Low" | "Low" | "Medium" | "High" | "Very High";
-type VietnameseRiskLevel = "Cao" | "Trung Bình" | "Thấp";
+const currentYear = new Date().getFullYear();
+const yearOptions = Array.from({ length: 6 }, (_, i) => ({
+  value: currentYear - i,
+  label: `Năm ${currentYear - i}`,
+}));
 
-const mapRiskLevelToVietnamese = (
-  level: BackendRiskLevel | string,
-): VietnameseRiskLevel => {
-  if (level === "Very High" || level === "High") return "Cao";
-  if (level === "Medium") return "Trung Bình";
-  return "Thấp";
-};
+const WARD_PAGE_SIZE = 15;
 
-interface WardReportData {
-  ward_name: string;
-  flood_risk: number;
-  risk_level: VietnameseRiskLevel;
-  population_density: number;
-  rainfall: number;
-  low_elevation: number;
-  urban_land: number;
-  drainage_capacity: number;
-  exposure: number;
-  susceptibility: number;
-  resilience: number;
-  district?: string;
-  province?: string;
+function getRiskLevelBadgeClass(riskLevel: string) {
+  if (riskLevel === "Cao")
+    return "bg-red-500/20 text-red-600";
+  if (riskLevel === "Trung bình")
+    return "bg-amber-500/20 text-amber-600";
+  return "bg-green-500/20 text-green-600";
 }
 
+const wardColumns: Array<{
+  header: string;
+  accessor: keyof WardReportItem | "stt";
+  render?: (value: unknown, row: WardReportItem & { stt?: number }) => React.ReactNode;
+}> = [
+  {
+    header: "STT",
+    accessor: "stt" as keyof WardReportItem,
+    render: (_: unknown, row) => (
+      <span className="text-gray-500">{row.stt ?? 0}</span>
+    ),
+  },
+  {
+    header: "Tên phường",
+    accessor: "ward_name",
+    render: (value: unknown) => (
+      <span className="font-medium">{String(value ?? "—")}</span>
+    ),
+  },
+  {
+    header: "Điểm R",
+    accessor: "total_score",
+    render: (value: unknown) => (
+      <span>{value != null ? Number(value).toFixed(2) : "—"}</span>
+    ),
+  },
+  {
+    header: "Trạng thái",
+    accessor: "risk_level",
+    render: (value: unknown) => (
+      <span
+        className={`px-2 py-1 rounded-full text-sm font-medium ${getRiskLevelBadgeClass(
+          String(value ?? "")
+        )}`}
+      >
+        {String(value ?? "—")}
+      </span>
+    ),
+  },
+];
+
 export default function RiskReportPage() {
+  const { user } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const [year, setYear] = useState(currentYear);
+  const [compareYear, setCompareYear] = useState(currentYear - 1);
+  const [showCompare, setShowCompare] = useState(false);
+  const [wardPage, setWardPage] = useState(1);
 
-  const {
-    data: wardsResponse,
-    isLoading: loadingWards,
-    error: wardsError,
-  } = useQuery({
-    queryKey: ["wards", "report"],
-    queryFn: async () => {
-      const response = await wardService.getWards({ limit: 1000 });
-      return response;
-    },
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
+  const isWardAdmin = user?.role === UserRole.WARD_ADMIN;
+  const canAccess = isSuperAdmin || isWardAdmin;
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["report-dashboard", year],
+    queryFn: () => reportService.getDashboard(year),
+    enabled: canAccess,
   });
 
-  const {
-    data: statsResponse,
-    isLoading: loadingStats,
-    error: statsError,
-  } = useQuery({
-    queryKey: ["wards", "stats"],
-    queryFn: () => wardService.getWardStats(),
+  const { data: compareData } = useQuery({
+    queryKey: ["report-compare", year, compareYear],
+    queryFn: () => reportService.getCompare(year, compareYear),
+    enabled: canAccess && showCompare,
   });
 
-  if (wardsError || statsError) {
-    toast.error("Không thể tải dữ liệu báo cáo rủi ro");
-  }
+  const handleExportExcel = async () => {
+    try {
+      await reportService.downloadExcel(year);
+      toast.success("Đã tải xuống file Excel");
+    } catch {
+      toast.error("Không thể xuất Excel");
+    }
+  };
 
-  const isLoading = loadingWards || loadingStats;
-  const wards = wardsResponse?.wards || [];
-  const stats = statsResponse?.statistics;
+  const handleExportPDF = async () => {
+    try {
+      await reportService.downloadPDF(year);
+      toast.success("Đã tải xuống file PDF");
+    } catch {
+      toast.error("Không thể xuất PDF");
+    }
+  };
 
-  const wardStats: WardReportData[] = wards.map((ward: WardData) => ({
-    ward_name: ward.ward_name,
-    flood_risk: ward.flood_risk ?? 0,
-    risk_level: mapRiskLevelToVietnamese(ward.risk_level ?? "Low"),
-    population_density: ward.population_density ?? 0,
-    rainfall: ward.rainfall ?? 0,
-    low_elevation: ward.low_elevation ?? 0,
-    urban_land: ward.urban_land ?? 0,
-    drainage_capacity: ward.drainage_capacity ?? 0,
-    exposure: ward.exposure ?? 0,
-    susceptibility: ward.susceptibility ?? 0,
-    resilience: ward.resilience ?? 0,
-    district: ward.district,
-    province: ward.province,
-  }));
-
-  const highRisk = wardStats.filter((w) => w.risk_level === "Cao").length;
-  const mediumRisk = wardStats.filter(
-    (w) => w.risk_level === "Trung Bình",
-  ).length;
-  const lowRisk = wardStats.filter((w) => w.risk_level === "Thấp").length;
-
-  const avgRisk =
-    stats?.avgRisk ??
-    (wardStats.length > 0
-      ? wardStats.reduce((sum, w) => sum + w.flood_risk, 0) / wardStats.length
-      : 0);
-  const maxRisk =
-    stats?.maxRisk ??
-    (wardStats.length > 0
-      ? Math.max(...wardStats.map((w) => w.flood_risk))
-      : 0);
-  const avgPopulation = stats?.avgRisk
-    ? (stats.totalPopulation ?? 0) / (stats.totalWards ?? 1)
-    : wardStats.length > 0
-      ? wardStats.reduce((sum, w) => sum + w.population_density, 0) /
-        wardStats.length
-      : 0;
-  const avgRainfall =
-    stats?.avgRainfall ??
-    (wardStats.length > 0
-      ? wardStats.reduce((sum, w) => sum + w.rainfall, 0) / wardStats.length
-      : 0);
-
-  if (isLoading) {
+  if (!canAccess) {
     return (
-      <div className="w-full h-full p-4 md:p-6 flex items-center justify-center">
-        <div className={`text-lg ${themeClasses.text}`}>
-          Đang tải dữ liệu...
-        </div>
-      </div>
-    );
-  }
-
-  if (wardStats.length === 0) {
-    return (
-      <div className="w-full h-full p-4 md:p-6 flex items-center justify-center">
-        <div className={`text-center ${themeClasses.text}`}>
-          <h2 className="text-xl font-semibold mb-2">Chưa có dữ liệu</h2>
+      <div className={`p-6 ${themeClasses.text}`}>
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold text-amber-600 mb-2">
+            Không có quyền truy cập
+          </h2>
           <p className={themeClasses.textSecondary}>
-            Không có dữ liệu phường/xã để hiển thị báo cáo rủi ro.
+            Trang Báo cáo rủi ro chỉ dành cho Super Admin và Quản lý phường.
           </p>
         </div>
       </div>
     );
   }
 
+  if (isLoading) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center min-h-[400px] gap-3 ${themeClasses.text}`}
+      >
+        <FaSpinner className="animate-spin text-4xl text-indigo-500" />
+        <p className="text-lg">Đang tải dữ liệu báo cáo...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className={`p-6 ${themeClasses.text}`}>
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            Không thể tải dữ liệu
+          </h2>
+          <p className={themeClasses.textSecondary}>
+            Vui lòng đảm bảo đã chạy refresh đánh giá rủi ro cho năm {year}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const reportData = data as ReportDashboardData;
+  const {
+    total,
+    highRisk,
+    mediumRisk,
+    lowRisk,
+    wards,
+    isWardAdmin: dataIsWardAdmin,
+  } = reportData;
+  const isWardView = dataIsWardAdmin ?? isWardAdmin;
+
+  const totalWardPages = Math.max(1, Math.ceil(wards.length / WARD_PAGE_SIZE));
+  const paginatedWards = wards
+    .slice((wardPage - 1) * WARD_PAGE_SIZE, wardPage * WARD_PAGE_SIZE)
+    .map((w, i) => ({
+      ...w,
+      stt: (wardPage - 1) * WARD_PAGE_SIZE + i + 1,
+    }));
+
+  const pieData = [
+    { name: "Thấp", value: lowRisk, color: "#9ca3af" },
+    { name: "Trung bình", value: mediumRisk, color: "#eab308" },
+    { name: "Cao", value: highRisk, color: "#ef4444" },
+  ].filter((d) => d.value > 0);
+
+  const top5HighRisk = wards
+    .filter((w) => w.risk_level === "Cao")
+    .slice(0, 5)
+    .map((w, i) => ({ ...w, stt: i + 1 }));
+
+  const handleYearChange = (newYear: number) => {
+    setYear(newYear);
+    setWardPage(1);
+  };
+
   return (
-    <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-y-auto overflow-x-hidden">
-      <div
-        className={`${themeClasses.text} text-2xl md:text-3xl font-bold mb-4`}
-      >
-        Báo cáo rủi ro ngập lụt
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="bg-red-500/20 border border-red-500 rounded-lg p-4">
-          <div className="text-red-400 text-sm mb-1">Rủi ro cao</div>
-          <div className={`${themeClasses.text} text-3xl font-bold`}>
-            {highRisk}
-          </div>
-          <div className="text-red-400 text-xs mt-1">
-            {((highRisk / wardStats.length) * 100).toFixed(1)}% tổng số
-          </div>
+    <div className={`p-4 md:p-6 space-y-6 ${themeClasses.background}`}>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1
+            className={`text-2xl md:text-3xl font-bold mb-1 ${themeClasses.text}`}
+          >
+            Báo cáo rủi ro ngập lụt
+          </h1>
+          <p className={themeClasses.textSecondary}>
+            {isWardView
+              ? "Thông tin và so sánh phường của bạn"
+              : "Tổng quan Thủ Đức – Thống kê và xuất báo cáo"}
+          </p>
         </div>
-        <div className="bg-orange-300/20 border border-orange-300 rounded-lg p-4">
-          <div className="text-orange-300 text-sm mb-1">Rủi ro trung bình</div>
-          <div className={`${themeClasses.text} text-3xl font-bold`}>
-            {mediumRisk}
-          </div>
-          <div className="text-orange-300 text-xs mt-1">
-            {((mediumRisk / wardStats.length) * 100).toFixed(1)}% tổng số
-          </div>
-        </div>
-        <div className="bg-green-300/20 border border-green-300 rounded-lg p-4">
-          <div className="text-green-300 text-sm mb-1">Rủi ro thấp</div>
-          <div className={`${themeClasses.text} text-3xl font-bold`}>
-            {lowRisk}
-          </div>
-          <div className="text-green-300 text-xs mt-1">
-            {((lowRisk / wardStats.length) * 100).toFixed(1)}% tổng số
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div
-          className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4`}
-        >
-          <div className={`${themeClasses.textSecondary} text-xs mb-1`}>
-            Chỉ số TB
-          </div>
-          <div className={`${themeClasses.text} text-2xl font-bold`}>
-            {avgRisk.toFixed(2)}
-          </div>
-        </div>
-        <div
-          className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4`}
-        >
-          <div className={`${themeClasses.textSecondary} text-xs mb-1`}>
-            Chỉ số cao nhất
-          </div>
-          <div className={`${themeClasses.text} text-2xl font-bold`}>
-            {maxRisk.toFixed(2)}
-          </div>
-        </div>
-        <div
-          className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4`}
-        >
-          <div className={`${themeClasses.textSecondary} text-xs mb-1`}>
-            Mật độ dân số TB
-          </div>
-          <div className={`${themeClasses.text} text-2xl font-bold`}>
-            {formatNumber(Math.round(avgPopulation))}
-          </div>
-        </div>
-        <div
-          className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-lg p-4`}
-        >
-          <div className={`${themeClasses.textSecondary} text-xs mb-1`}>
-            Lượng mưa TB
-          </div>
-          <div className={`${themeClasses.text} text-2xl font-bold`}>
-            {avgRainfall.toFixed(0)} mm
-          </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Select
+            value={year}
+            onChange={(e) => handleYearChange(Number(e.target.value))}
+            options={yearOptions}
+            className="min-w-[120px]"
+          />
+          <Button
+            variant="primary"
+            onClick={handleExportExcel}
+            className="flex items-center gap-2"
+          >
+            <FaFileExcel />
+            Xuất Excel
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleExportPDF}
+            className="flex items-center gap-2"
+          >
+            <FaFilePdf />
+            Xuất PDF
+          </Button>
         </div>
       </div>
 
-      <div
-        className={`${themeClasses.container} rounded-xl shadow-2xl overflow-hidden flex-1 flex flex-col`}
-      >
-        <div className="overflow-x-auto flex-1">
-          <div className="h-full overflow-y-auto">
-            <table className={`w-full ${themeClasses.text}`}>
-              <thead
-                className={`sticky top-0 z-10 border-b ${themeClasses.border} ${themeClasses.backgroundSecondary}`}
+      {/* Tổng quan - Cards (chỉ cho Super Admin / toàn thành phố) */}
+      {!isWardView && (
+        <div
+          className={`grid gap-4 ${
+            isWardView ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"
+          }`}
+        >
+          <div
+            className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-4`}
+          >
+            <div className={`text-sm ${themeClasses.textSecondary}`}>
+              Tổng số phường
+            </div>
+            <div className={`text-2xl font-bold ${themeClasses.text}`}>
+              {total}
+            </div>
+          </div>
+          <StatCard
+            title="Phường nguy hiểm (Cao)"
+            value={highRisk}
+            variant="danger"
+          />
+          <StatCard
+            title="Phường trung bình"
+            value={mediumRisk}
+            variant="warning"
+          />
+          <StatCard
+            title="Phường an toàn (Thấp)"
+            value={lowRisk}
+            variant="success"
+          />
+        </div>
+      )}
+
+      {/* Biểu đồ + Bản đồ + So sánh năm */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Biểu đồ tròn | Thông tin phường */}
+        <div
+          className={`lg:col-span-2 ${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
+        >
+          <h2 className={`text-lg font-semibold mb-4 ${themeClasses.text}`}>
+            <FaChartPie className="inline mr-2" />
+            {isWardView ? "Mức độ rủi ro phường" : "Tỷ lệ các mức rủi ro"}
+          </h2>
+          {isWardView && wards[0] ? (
+            <div
+              className={`flex flex-col items-center justify-center py-8 ${themeClasses.text}`}
+            >
+              <div className="text-2xl font-bold mb-1">
+                {wards[0].ward_name}
+              </div>
+              <div className="text-4xl font-bold mb-2">
+                {(wards[0].total_score ?? 0).toFixed(2)}
+              </div>
+              <span
+                className={`px-4 py-2 rounded-full text-lg font-medium ${getRiskLevelBadgeClass(
+                  wards[0].risk_level
+                )}`}
               >
-                <tr>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    STT
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Tên phường/xã
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Chỉ số rủi ro
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Mức độ
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Mật độ dân số
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Lượng mưa
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Độ cao thấp
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Đất đô thị
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Khả năng thoát nước
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Exposure
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Susceptibility
-                  </th>
-                  <th
-                    className={`text-left p-2 text-xs font-semibold ${themeClasses.textSecondary}`}
-                  >
-                    Resilience
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {wardStats
-                  .sort((a, b) => b.flood_risk - a.flood_risk)
-                  .map((ward, index) => {
-                    const riskLevel = ward.risk_level;
-                    return (
-                      <tr
-                        key={ward.ward_name}
-                        className={`border-b ${themeClasses.border} ${
-                          theme === "light"
-                            ? "hover:bg-gray-100"
-                            : "hover:bg-gray-800/50"
-                        } transition-colors`}
+                {wards[0].risk_level}
+              </span>
+            </div>
+          ) : pieData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  label={({ name, percent }) =>
+                    `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
+                  }
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div
+              className={`h-48 flex items-center justify-center ${themeClasses.textSecondary}`}
+            >
+              {isWardView
+                ? "Chưa có dữ liệu đánh giá cho phường"
+                : "Chưa có dữ liệu phân bố"}
+            </div>
+          )}
+        </div>
+
+        {/* Bản đồ + So sánh */}
+        <div className="space-y-6">
+          <div
+            className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
+          >
+            <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>
+              <FaMapMarkedAlt className="inline mr-2" />
+              Bản đồ phân vùng
+            </h2>
+            <p className={`text-sm ${themeClasses.textSecondary} mb-4`}>
+              Bản đồ GIS hiển thị 3 màu (xanh, vàng, đỏ) theo mức rủi ro
+            </p>
+            <Link
+              to={`${ADMIN_PAGE_VIEW_PATH}?year=${year}`}
+              className="block w-full"
+            >
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <FaMapMarkedAlt />
+                Xem bản đồ
+              </Button>
+            </Link>
+          </div>
+
+          {/* So sánh năm */}
+          <div
+            className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
+          >
+            <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>
+              So sánh giữa các năm
+            </h2>
+            <div className="flex gap-2 mb-3">
+              <Select
+                value={compareYear}
+                onChange={(e) => setCompareYear(Number(e.target.value))}
+                options={yearOptions.filter((y) => y.value !== year)}
+                className="flex-1"
+              />
+              <Button
+                variant="secondary"
+                onClick={() => setShowCompare(!showCompare)}
+              >
+                {showCompare ? "Ẩn" : "So sánh"}
+              </Button>
+            </div>
+            {showCompare && compareData && (
+              <div className="space-y-2 text-sm">
+                {compareData.wardCompare ? (
+                  <div className={`space-y-3 ${themeClasses.text}`}>
+                    <div className="font-medium">
+                      {compareData.wardCompare.ward_name}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div
+                        className={`p-2 rounded ${themeClasses.backgroundTertiary}`}
                       >
-                        <td className={`p-3 ${themeClasses.textSecondary}`}>
-                          {index + 1}
-                        </td>
-                        <td className={`p-3 font-medium ${themeClasses.text}`}>
-                          {ward.ward_name}
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          <span className="font-bold">
-                            {ward.flood_risk.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="p-3">
+                        <div className="text-xs opacity-70">Năm {year}</div>
+                        <div>
+                          {compareData.wardCompare.year1 ? (
+                            <>
+                              {(compareData.wardCompare.year1.total_score ?? 0).toFixed(2)} — {compareData.wardCompare.year1.risk_level}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className={`p-2 rounded ${themeClasses.backgroundTertiary}`}
+                      >
+                        <div className="text-xs opacity-70">
+                          Năm {compareYear}
+                        </div>
+                        <div>
+                          {compareData.wardCompare.year2 ? (
+                            <>
+                              {(compareData.wardCompare.year2.total_score ?? 0).toFixed(2)} — {compareData.wardCompare.year2.risk_level}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  compareData.comparison?.map((c) => (
+                    <div
+                      key={c.level}
+                      className={`flex justify-between ${themeClasses.text}`}
+                    >
+                      <span>{c.level}:</span>
+                      <span>
+                        {year}: {c.year1} | {compareYear}: {c.year2}
+                        {c.change !== 0 && (
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              riskLevel === "Cao"
-                                ? "bg-red-500/20 text-red-400"
-                                : riskLevel === "Trung Bình"
-                                  ? "bg-orange-300/20 text-orange-300"
-                                  : "bg-green-300/20 text-green-300"
-                            }`}
+                            className={
+                              c.change > 0 ? "text-red-500" : "text-green-500"
+                            }
                           >
-                            {riskLevel}
+                            {" "}
+                            ({c.change > 0 ? "+" : ""}
+                            {c.change})
                           </span>
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          {ward.population_density.toLocaleString()} người/km²
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          {ward.rainfall} mm
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          {ward.low_elevation.toFixed(1)} m
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          {ward.urban_land.toFixed(1)}
-                        </td>
-                        <td className={`p-3 ${themeClasses.text}`}>
-                          {ward.drainage_capacity.toFixed(1)}
-                        </td>
-                        <td
-                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                        >
-                          {ward.exposure.toFixed(2)}
-                        </td>
-                        <td
-                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                        >
-                          {ward.susceptibility.toFixed(2)}
-                        </td>
-                        <td
-                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                        >
-                          {ward.resilience.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+                        )}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end gap-3 shrink-0">
-        <Button variant="primary" onClick={() => window.print()}>
-          In báo cáo
-        </Button>
+      {/* Top 5 phường nguy cơ cao - chỉ Super Admin */}
+      {!isWardView && top5HighRisk.length > 0 && (
+        <div
+          className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
+        >
+          <h2 className={`text-lg font-semibold mb-4 ${themeClasses.text}`}>
+            5 phường có nguy cơ cao nhất cần ưu tiên nguồn lực
+          </h2>
+          <Table
+            columns={wardColumns}
+            data={top5HighRisk}
+            emptyMessage="Không có phường nguy cơ cao"
+          />
+        </div>
+      )}
+
+      {/* Bảng chi tiết */}
+      <div
+        className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl overflow-hidden`}
+      >
+        <div className="p-4 border-b border-inherit">
+          <h2 className={`text-lg font-semibold ${themeClasses.text}`}>
+            {isWardView
+              ? "Thông tin phường"
+              : "Danh sách chi tiết: Tên phường | Điểm R | Trạng thái rủi ro"}
+          </h2>
+        </div>
+        <Table
+          columns={wardColumns}
+          data={paginatedWards}
+          emptyMessage="Chưa có dữ liệu"
+        />
+        <Pagination
+          page={wardPage}
+          totalPages={totalWardPages}
+          totalItems={wards.length}
+          pageSize={WARD_PAGE_SIZE}
+          onPageChange={setWardPage}
+          itemLabel="phường"
+        />
       </div>
     </div>
   );

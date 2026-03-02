@@ -55,7 +55,7 @@ export interface WardDetailFromDB {
   unit_id: string;
   name: string;
   area_km2: number;
-  total_score: number;
+  total_score: number | null;
   risk_level: string;
   indicator_values: Array<{
     indicator_code: string;

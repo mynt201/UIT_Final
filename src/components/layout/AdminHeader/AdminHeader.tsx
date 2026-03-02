@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { FaBell, FaUserCircle, FaSync, FaHome, FaClock } from "react-icons/fa";
+import { FaBell, FaSync, FaClock } from "react-icons/fa";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import { useAuth } from "../../../contexts/AuthContext";
-import { HOME_PATH } from "../../../router/routePath";
 import { getRoleLabel } from "../../../constants/roles";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
@@ -16,7 +14,6 @@ interface AdminHeaderProps {
 }
 
 export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
-  const navigate = useNavigate();
   const { theme } = useTheme();
   const { user } = useAuth();
   const themeClasses = getThemeClasses(theme);
@@ -34,9 +31,19 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
     return dayjs(date).format("dddd, DD [tháng] MMMM [năm] YYYY, HH:mm:ss");
   };
 
-  const handleGoToHome = () => {
-    navigate(HOME_PATH);
+  const getInitials = () => {
+    if (!user) return "?";
+    if (user.full_name && user.full_name.trim()) {
+      const parts = user.full_name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return user.full_name.slice(0, 2).toUpperCase();
+    }
+    return (user.username || user.email || "A").slice(0, 2).toUpperCase();
   };
+
+  const avatarUrl = user ? (user as { avatar_url?: string }).avatar_url : undefined;
 
   return (
     <header
@@ -53,19 +60,6 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
           </p>
         </div>
         <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
-          <button
-            onClick={handleGoToHome}
-              className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 text-white rounded-lg transition-colors text-xs md:text-sm ${theme === "light"
-                ? "bg-indigo-600 hover:bg-indigo-700"
-                : "bg-indigo-500 hover:bg-indigo-600"
-                }`}
-              title="Quay về Trang chủ"
-            >
-              <FaHome size={16} className="md:w-[18px] md:h-[18px]" />
-              <span className="hidden md:inline whitespace-nowrap">
-                Trang chủ
-              </span>
-            </button>
           {onRefresh && (
             <button
               onClick={onRefresh}
@@ -93,10 +87,17 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
           <div
             className={`flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l ${themeClasses.border}`}
           >
-            <FaUserCircle
-              size={20}
-              className={`md:w-6 md:h-6 shrink-0 ${themeClasses.textSecondary}`}
-            />
+            <div
+              className={`w-8 h-8 md:w-9 md:h-9 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-semibold ${
+                theme === "light" ? "bg-indigo-100 text-indigo-600" : "bg-indigo-900/50 text-indigo-300"
+              }`}
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                getInitials()
+              )}
+            </div>
             <div className="text-right min-w-0">
               <p
                 className={`text-xs md:text-sm font-medium truncate ${themeClasses.text}`}

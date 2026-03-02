@@ -6,6 +6,7 @@ const legendItems: { level: string; label: string }[] = [
   { level: 'Cao', label: 'Cao' },
   { level: 'Trung bình', label: 'Trung bình' },
   { level: 'Thấp', label: 'Thấp' },
+  { level: 'Chưa có dữ liệu', label: 'Chưa có dữ liệu' },
 ];
 
 export default function FloodMapLegend() {

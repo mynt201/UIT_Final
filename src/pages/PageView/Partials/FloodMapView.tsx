@@ -6,8 +6,10 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import TileLayer from "@arcgis/core/layers/TileLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 
 import { useMapWards } from "../../../hooks/useMapWards";
+import { useSettings } from "../../../contexts/SettingsContext";
 import {
   calcFloodRiskIndex,
   getRiskLevel,
@@ -66,19 +68,22 @@ const convertGeoJSONToRings = (
 function backendLevelToInternal(
   backendLevel: string | undefined,
   floodRisk: number,
-): "cao" | "trungBinh" | "thap" {
+): "cao" | "trungBinh" | "thap" | "chuaCoDuLieu" {
   const l = backendLevel?.trim?.() ?? "";
   if (l === "Rất cao" || l === "Cao") return "cao";
   if (l === "Trung bình") return "trungBinh";
   if (l === "Thấp" || l === "Rất thấp") return "thap";
+  if (l === "Chưa có dữ liệu") return "chuaCoDuLieu";
   return getRiskLevel(floodRisk);
 }
 
 interface FloodMapViewProps {
+  year?: number;
   selectedRiskLevels?: string[];
 }
 
 export default function FloodMapView({
+  year = new Date().getFullYear(),
   selectedRiskLevels = ["cao", "trungBinh", "thap"],
 }: FloodMapViewProps) {
   const mapDiv = useRef<HTMLDivElement>(null);
@@ -87,35 +92,26 @@ export default function FloodMapView({
   const buildingsLayerRef = useRef<FeatureLayer | null>(null);
   const viewRef = useRef<MapView | null>(null);
   const initialCenter = useRef<[number, number]>([106.7, 10.78]);
+  const { settings } = useSettings();
+  const mapZoom = settings.mapDefaultZoom ?? 13;
+  const mapAnimation = settings.mapAnimation ?? true;
 
-  const getInitialZoom = () => {
-    try {
-      const savedSettings = localStorage.getItem("appSettings");
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        return parsed.mapDefaultZoom || 13;
-      }
-    } catch {
-      // Ignore
-    }
-    return 13;
-  };
+  const initialZoom = useRef<number>(mapZoom);
 
-  const initialZoom = useRef<number>(getInitialZoom());
-
-  // Fetch phường từ API map flood-risk (GeoJSON)
+  // Fetch phường từ API map/flood-risk (GeoJSON: id, name, total_score, risk_level), filter theo năm
   const {
     data: wardsResponse,
     isLoading,
     error: wardsError,
-  } = useMapWards();
+  } = useMapWards({ year });
 
   const wards = wardsResponse?.wards || [];
   const error = wardsError?.message || null;
 
   const [showRoads, setShowRoads] = useState<boolean>(false);
   const [showBuildings, setShowBuildings] = useState<boolean>(false);
-  const [selectedWardDetail, setSelectedWardDetail] = useState<WardDetailFromDB | null>(null);
+  const [selectedWardDetail, setSelectedWardDetail] =
+    useState<WardDetailFromDB | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
@@ -136,26 +132,10 @@ export default function FloodMapView({
   useEffect(() => {
     if (!mapDiv.current || isLoading) return;
 
-    const getMapSettings = () => {
-      try {
-        const savedSettings = localStorage.getItem("appSettings");
-        if (savedSettings) {
-          const parsed = JSON.parse(savedSettings);
-          return {
-            animation: parsed.mapAnimation !== false,
-            zoom: parsed.mapDefaultZoom || 13,
-          };
-        }
-      } catch {
-        // Ignore
-      }
-      return {
-        animation: true,
-        zoom: 13,
-      };
+    const mapSettings = {
+      animation: mapAnimation,
+      zoom: mapZoom,
     };
-
-    const mapSettings = getMapSettings();
 
     // Create additional layers for better map visualization
     const roadsLayer = new TileLayer({
@@ -200,7 +180,7 @@ export default function FloodMapView({
     return () => {
       view.destroy();
     };
-  }, [isLoading, showBuildings, showRoads]);
+  }, [isLoading, showBuildings, showRoads, mapZoom, mapAnimation]);
 
   useEffect(() => {
     if (!viewRef.current) return;
@@ -244,29 +224,28 @@ export default function FloodMapView({
                     });
                   }
 
-                  view
-                    .goTo({
-                      target: graphic.geometry,
-                      zoom: 15,
-                    })
-                    .catch(() => {});
-
-                  setSelectedUnitId(unitId);
                   setDetailLoading(true);
-                  setSelectedWardDetail(null);
-                  const year = new Date().getFullYear();
+                  setSelectedWardDetail({
+                    unit_id: unitId ?? "",
+                    name: wardName,
+                    area_km2: 0,
+                    total_score: totalScore ?? 0,
+                    risk_level: riskLevel,
+                    indicator_values: [],
+                  });
+                  setSelectedUnitId(unitId);
                   const detail = unitId
-                    ? await fetchWardDetail(unitId, year, totalScore, riskLevel)
+                    ? await fetchWardDetail(unitId, year)
                     : null;
                   setSelectedWardDetail(
                     detail ?? {
-                      unit_id: "",
+                      unit_id: unitId ?? "",
                       name: wardName,
                       area_km2: 0,
-                      total_score: totalScore,
+                      total_score: totalScore ?? 0,
                       risk_level: riskLevel,
                       indicator_values: [],
-                    }
+                    },
                   );
                   setDetailLoading(false);
                 }
@@ -286,7 +265,7 @@ export default function FloodMapView({
         clickHandle.remove();
       }
     };
-  }, [wards]);
+  }, [wards, year]);
 
   useEffect(() => {
     if (!wardLayerRef.current || wards.length === 0) return;
@@ -294,19 +273,9 @@ export default function FloodMapView({
     wardLayerRef.current.removeAll();
 
     const filteredWards = wards.filter((ward) => {
-      let floodRisk: number;
-      if (ward.flood_risk !== undefined) {
-        floodRisk = ward.flood_risk;
-      } else {
-        const exposure = ward.population_density / 1000 + ward.rainfall / 200;
-        const susceptibility = ward.low_elevation + ward.urban_land;
-        const resilience = ward.drainage_capacity || 1;
-        floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
-      }
-
       const internalLevel = backendLevelToInternal(
         ward.risk_level as string | undefined,
-        floodRisk,
+        ward.flood_risk ?? 0,
       );
       const matchesRiskLevel = selectedRiskLevels.includes(internalLevel);
 
@@ -322,11 +291,17 @@ export default function FloodMapView({
       const resilience = ward.drainage_capacity || 1;
 
       // Sử dụng flood_risk từ database nếu có, nếu không thì tính toán
+      const hasData = ward.risk_level !== "Chưa có dữ liệu";
       const floodRisk =
-        ward.flood_risk !== undefined
+        hasData && ward.flood_risk != null
           ? ward.flood_risk
-          : calcFloodRiskIndex(exposure, susceptibility, resilience);
-      const riskLevel = getRiskLevel(floodRisk);
+          : hasData
+            ? calcFloodRiskIndex(exposure, susceptibility, resilience)
+            : null;
+      const riskLevel = backendLevelToInternal(
+        ward.risk_level as string | undefined,
+        floodRisk ?? 0,
+      );
       const backendLevel = ward.risk_level as string | undefined;
       const color = backendLevel
         ? getRiskColorFromBackend(backendLevel)
@@ -350,7 +325,6 @@ export default function FloodMapView({
         spatialReference: { wkid: 4326 },
       });
 
-      // Popup hiển thị thông tin cơ bản từ map (total_score, risk_level). Chi tiết đầy đủ theo DB ở panel.
       const popupContent = `
         <div style="min-width: 260px; font-family: system-ui, -apple-system, sans-serif;">
           <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1f2937;">${ward.ward_name}</h2>
@@ -363,7 +337,7 @@ export default function FloodMapView({
           </div>
           <div style="font-size: 13px;">
             <span style="color: #6b7280;">Tổng điểm (total_score):</span>
-            <span style="font-weight: 600; color: #1f2937; margin-left: 6px;">${Number(floodRisk ?? 0).toFixed(2)}</span>
+            <span style="font-weight: 600; color: #1f2937; margin-left: 6px;">${floodRisk != null ? Number(floodRisk).toFixed(2) : "—"}</span>
           </div>
           <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">Nhấp để xem chi tiết đầy đủ theo DB</div>
         </div>
@@ -377,6 +351,7 @@ export default function FloodMapView({
           flood_risk: floodRisk,
           risk_level: levelLabel,
           risk_level_key: riskLevel,
+          _outlineColor: outlineColor,
           population_density: ward.population_density,
           rainfall: ward.rainfall,
           low_elevation: ward.low_elevation,
@@ -392,8 +367,8 @@ export default function FloodMapView({
           type: "simple-fill",
           color,
           outline: {
-            width: ward._id === selectedUnitId ? 3 : 0.8,
-            color: ward._id === selectedUnitId ? [0, 112, 255, 1] : outlineColor,
+            width: 0.8,
+            color: outlineColor,
           },
         },
       });
@@ -402,13 +377,32 @@ export default function FloodMapView({
         wardLayerRef.current.add(graphic);
       }
     });
-  }, [selectedRiskLevels, wards, selectedUnitId]);
+  }, [selectedRiskLevels, wards]);
+
+  useEffect(() => {
+    const layer = wardLayerRef.current;
+    if (!layer || layer.graphics.length === 0) return;
+
+    layer.graphics.forEach((graphic) => {
+      if (!graphic.symbol || graphic.symbol.type !== "simple-fill") return;
+      const uid = graphic.attributes?.unit_id as string | undefined;
+      const stored = graphic.attributes?._outlineColor as number[] | undefined;
+      const fillColor = (graphic.symbol as __esri.SimpleFillSymbol).color;
+
+      const isSelected = uid === selectedUnitId;
+      graphic.symbol = new SimpleFillSymbol({
+        color: fillColor,
+        outline: {
+          width: isSelected ? 3 : 0.8,
+          color: isSelected ? [0, 112, 255, 1] : (stored ?? [0, 0, 0, 0.5]),
+        },
+      });
+    });
+  }, [selectedUnitId, wards]);
 
   if (isLoading) {
     return (
-      <div
-        className="relative w-full flex-1 flex items-center justify-center min-h-[400px]"
-      >
+      <div className="relative w-full flex-1 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Đang tải bản đồ...</p>
@@ -419,9 +413,7 @@ export default function FloodMapView({
 
   if (error) {
     return (
-      <div
-        className="relative w-full flex-1 flex items-center justify-center min-h-[400px]"
-      >
+      <div className="relative w-full flex-1 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="text-red-500 mb-4">⚠️ {error}</div>
           <p className="text-gray-600">Vui lòng thử lại sau.</p>

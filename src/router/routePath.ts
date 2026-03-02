@@ -8,9 +8,9 @@ export const ADMIN_DASHBOARD_PATH = '/admin';
 export const ADMIN_DATA_MANAGEMENT_PATH = '/admin/data-management';
 export const ADMIN_INDICATOR_MANAGEMENT_PATH = '/admin/indicator-management';
 export const ADMIN_USER_MANAGEMENT_PATH = '/admin/users';
-export const ADMIN_STATISTICS_PATH = '/admin/statistics';
 export const ADMIN_PAGE_VIEW_PATH = '/admin/map-view';
 export const ADMIN_RISK_REPORT_PATH = '/admin/risk-report';
+export const ADMIN_RISK_ASSESSMENT_MANAGEMENT_PATH = '/admin/risk-assessment-management';
 export const ADMIN_USER_PROFILE_PATH = '/admin/profile';
 export const ADMIN_SETTINGS_PATH = '/admin/settings';
 

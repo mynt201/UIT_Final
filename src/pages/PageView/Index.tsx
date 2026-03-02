@@ -1,17 +1,34 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import FloodMapView from "./Partials/FloodMapView";
 import FilterSection from "./Partials/FilterSection";
-import { useWards } from "../../hooks/useWards";
+import { useMapWards } from "../../hooks/useMapWards";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 
 const PageView = () => {
-  const { isLoading: wardsLoading, error: wardsError } = useWards({ limit: 100 });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentYear = new Date().getFullYear();
+  const yearFromUrl = searchParams.get("year");
+  const year = useMemo(() => {
+    const parsed = yearFromUrl ? parseInt(yearFromUrl, 10) : currentYear;
+    return Number.isNaN(parsed) ? currentYear : parsed;
+  }, [yearFromUrl, currentYear]);
+
+  const handleYearChange = (newYear: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("year", String(newYear));
+      return next;
+    });
+  };
+  const { isLoading: mapLoading, error: mapError } = useMapWards({ year });
 
   const [selectedRiskLevels, setSelectedRiskLevels] = useState<string[]>([
     "cao",
     "trungBinh",
     "thap",
+    "chuaCoDuLieu",
   ]);
 
   const handleRiskLevelChange = (value: string) => {
@@ -27,8 +44,8 @@ const PageView = () => {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
-  // Show loading state while fetching wards
-  if (wardsLoading) {
+  // Show loading state while fetching map data (phường, total_score, risk_level)
+  if (mapLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
@@ -41,8 +58,8 @@ const PageView = () => {
     );
   }
 
-  // Show error state if wards fetch failed
-  if (wardsError) {
+  // Show error state if map API failed
+  if (mapError) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
@@ -62,12 +79,14 @@ const PageView = () => {
       <div
         className={`${themeClasses.text} text-sm md:text-base p-2 md:p-3 shrink-0`}
       >
-        Bản đồ khu vực TP.HCM. Dữ liệu bản đồ
+        Bản đồ ngập lụt TP.HCM — filter theo năm
       </div>
 
       {/* Filter Section */}
       <div className="shrink-0">
         <FilterSection
+          year={year}
+          onYearChange={handleYearChange}
           selectedRiskLevels={selectedRiskLevels}
           onRiskLevelChange={handleRiskLevelChange}
         />
@@ -75,7 +94,7 @@ const PageView = () => {
 
       {/* Map View */}
       <div className="flex-1 min-h-[400px] flex flex-col">
-        <FloodMapView selectedRiskLevels={selectedRiskLevels} />
+        <FloodMapView year={year} selectedRiskLevels={selectedRiskLevels} />
       </div>
     </div>
   );

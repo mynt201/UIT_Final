@@ -20,10 +20,13 @@ export default function Select({
   error,
   placeholder,
   className = "",
+  required,
   ...props
 }: SelectProps) {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const showAsterisk = required || (label?.includes("*") ?? false);
+  const cleanLabel = label ? label.replace(/\s*\*+$/, "") : "";
 
   return (
     <div>
@@ -31,11 +34,13 @@ export default function Select({
         <label
           className={`block text-sm font-medium mb-2 ${themeClasses.textSecondary}`}
         >
-          {label}
+          {cleanLabel}{" "}
+          {showAsterisk && <span className="text-red-500">*</span>}
         </label>
       )}
       <select
         {...props}
+        required={required}
         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500 appearance-none ${themeClasses.input} ${themeClasses.border} ${className}`}
       >
         {placeholder && (

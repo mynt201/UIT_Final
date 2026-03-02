@@ -74,6 +74,26 @@ export const indicatorValueService = {
     const res = await api.post('/indicator-values/bulk-upsert', { items });
     return res.data as { success: boolean; data: IndicatorValueRecord[]; count: number };
   },
+
+  /** Tải template CSV - unit_id và year có thể là "all" cho tất cả */
+  async downloadTemplate(unitId?: string | null, year?: number | string | null) {
+    const params: Record<string, string | number> = {};
+    params.unit_id = unitId && unitId !== '' ? unitId : 'all';
+    params.year = year !== undefined && year !== '' && year !== null ? String(year) : 'all';
+    const res = await api.get('/indicator-values/template', {
+      params,
+      responseType: 'blob',
+    });
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'ChiSoRuiRo_Template.csv');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export interface FloodIndicatorCreatePayload {

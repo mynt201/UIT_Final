@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import * as yup from "yup";
 import { FaPlus, FaEdit, FaTrash, FaChartLine, FaSync } from "react-icons/fa";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
@@ -44,6 +45,30 @@ const defaultForm: IndicatorFormData = {
   direction: 1,
 };
 
+const indicatorSchema = yup.object().shape({
+  code: yup
+    .string()
+    .required("Mã chỉ số là bắt buộc")
+    .trim()
+    .max(20, "Mã chỉ số không được vượt quá 20 ký tự"),
+  name: yup
+    .string()
+    .required("Tên chỉ số là bắt buộc")
+    .trim()
+    .max(200, "Tên chỉ số không được vượt quá 200 ký tự"),
+  group_type: yup
+    .string()
+    .required("Nhóm là bắt buộc"),
+  unit: yup
+    .string()
+    .max(50, "Đơn vị không được vượt quá 50 ký tự")
+    .nullable(),
+  direction: yup
+    .number()
+    .oneOf([0, 1], "Hướng phải là 0 hoặc 1")
+    .required("Hướng là bắt buộc"),
+});
+
 export default function IndicatorManagementPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
@@ -58,6 +83,9 @@ export default function IndicatorManagementPage() {
   const [indicatorToDelete, setIndicatorToDelete] =
     useState<FloodIndicator | null>(null);
   const [form, setForm] = useState<IndicatorFormData>(defaultForm);
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof IndicatorFormData, string>>
+  >({});
   const [ahpModalOpen, setAhpModalOpen] = useState(false);
   const [ahpMatrix, setAhpMatrix] = useState<number[][]>([]);
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null);
@@ -233,6 +261,7 @@ export default function IndicatorManagementPage() {
     setIsEditMode(false);
     setEditingIndicator(null);
     setForm(defaultForm);
+    setFormErrors({});
   };
 
   const handleOpenAdd = () => {
@@ -255,9 +284,19 @@ export default function IndicatorManagementPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!form.code?.trim() || !form.name?.trim()) {
-      toast.error("Mã và tên là bắt buộc");
+  const handleSubmit = async () => {
+    try {
+      await indicatorSchema.validate(form, { abortEarly: false });
+      setFormErrors({});
+    } catch (err) {
+      const e: Record<string, string> = {};
+      (err as yup.ValidationError).inner?.forEach((x) => {
+        if (x.path) {
+          e[x.path as keyof IndicatorFormData] = x.message;
+        }
+      });
+      setFormErrors(e);
+      toast.error("Vui lòng kiểm tra lại các trường bắt buộc.");
       return;
     }
     if (isEditMode && editingIndicator) {
@@ -360,6 +399,7 @@ export default function IndicatorManagementPage() {
         isEditMode={isEditMode}
         form={form}
         setForm={setForm}
+        errors={formErrors}
         loading={loading}
       />
 

@@ -58,11 +58,11 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
           await authService.getProfile();
         }
       } catch (error) {
-         
         console.error('Auth initialization error:', error);
-        // Clear invalid stored data
         localStorage.removeItem('authToken');
         localStorage.removeItem('userData');
+        setToken(null);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }

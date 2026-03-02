@@ -30,11 +30,10 @@ const axiosRequestInterceptor = () => {
         '/wards/risk/',
         '/wards/name/',
         '/administrative-units',
-        '/risk-assessments',
         '/map/flood-risk',
+        '/map/unit/',
         '/flood-indicators',
         '/indicator-values',
-        '/settings',
         '/weather',
         '/weather/latest',
         '/weather/ward/',
@@ -44,8 +43,16 @@ const axiosRequestInterceptor = () => {
         '/road-bridge',
       ];
 
+      // Các endpoint bắt buộc auth, không skip
+      const isAuthRequiredOverride =
+        config.url?.includes('/indicator-values/template') ||
+        config.url?.includes('/risk-assessments');
+
       const isGetRequest = config.method?.toLowerCase() === 'get';
-      const shouldSkipAuth = isGetRequest && skipAuthEndpoints.some((endpoint) => config.url?.includes(endpoint));
+      const shouldSkipAuth =
+        !isAuthRequiredOverride &&
+        isGetRequest &&
+        skipAuthEndpoints.some((endpoint) => config.url?.includes(endpoint));
 
       if (!shouldSkipAuth) {
         const token = localStorage.getItem('authToken');
@@ -78,7 +85,7 @@ const axiosResponseInterceptor = () => {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     }
     

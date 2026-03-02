@@ -3,6 +3,7 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 // import CssBaseline from '@mui/material/CssBaseline';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -21,6 +22,7 @@ const muiTheme = createTheme({
 
 function App() {
   return (
+    <SettingsProvider>
     <ThemeProvider>
       <MuiThemeProvider theme={muiTheme}>
         {/* <CssBaseline /> */}
@@ -51,6 +53,7 @@ function App() {
         />
       </MuiThemeProvider>
     </ThemeProvider>
+    </SettingsProvider>
   );
 }
 

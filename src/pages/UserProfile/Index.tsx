@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { IoMdColorFilter, IoMdCheckmark, IoMdClose } from "react-icons/io";
 import { useFormik } from "formik";
+import toast from "react-hot-toast";
 
 import * as yup from "yup";
 import { useAuth } from "../../contexts/AuthContext";
@@ -8,26 +9,20 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { formatDate } from "../../utils/formatUtils";
 import { Input, Button } from "../../components";
-import type { UpdateUserProfileData } from "../../types";
 import { getRoleLabel, UserRole } from "../../constants/roles";
 
 const profileSchema = yup.object().shape({
   full_name: yup.string(),
-  phone: yup.string().matches(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
-  address: yup.string(),
   email: yup.string().email("Email không hợp lệ"),
 });
 
 export default function UserProfilePage() {
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const formik = useFormik({
     initialValues: {
       full_name: "",
-      phone: "",
-      address: "",
       email: "",
     },
     validationSchema: profileSchema,
@@ -36,10 +31,11 @@ export default function UserProfilePage() {
         if (!user) return;
 
         await updateUser(values);
-        setSuccessMessage("Cập nhật thông tin thành công!");
+        toast.success("Cập nhật thông tin thành công!");
         setIsEditing(false);
       } catch (err) {
         console.error("Update failed:", err);
+        toast.error("Không thể cập nhật thông tin");
       } finally {
         setSubmitting(false);
       }
@@ -50,8 +46,6 @@ export default function UserProfilePage() {
     if (user) {
       formik.setValues({
         full_name: user.full_name || "",
-        phone: (user as { phone?: string }).phone || "",
-        address: (user as { address?: string }).address || "",
         email: user.email || "",
       });
     }
@@ -59,7 +53,6 @@ export default function UserProfilePage() {
 
   const handleEdit = () => {
     setIsEditing(true);
-    setSuccessMessage("");
     formik.setErrors({});
   };
 
@@ -68,12 +61,9 @@ export default function UserProfilePage() {
     if (user) {
       formik.setValues({
         full_name: user.full_name || "",
-        phone: (user as { phone?: string }).phone || "",
-        address: (user as { address?: string }).address || "",
         email: user.email || "",
       });
     }
-    setSuccessMessage("");
     formik.setErrors({});
   };
 
@@ -93,14 +83,18 @@ export default function UserProfilePage() {
     );
   }
 
-  const formatDateLocal = (dateString?: string) => {
-    if (!dateString) return "Chưa có";
-    try {
-      return new Date(dateString).toLocaleString("vi-VN");
-    } catch (error) {
-      return "Ngày không hợp lệ";
+  const getInitials = () => {
+    if (user.full_name && user.full_name.trim()) {
+      const parts = user.full_name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return user.full_name.slice(0, 2).toUpperCase();
     }
+    return user.username.slice(0, 2).toUpperCase();
   };
+
+  const avatarUrl = (user as { avatar_url?: string }).avatar_url;
 
   return (
     <div className="w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden">
@@ -120,21 +114,41 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      {successMessage && (
-        <div
-          className={`mb-4 p-3 rounded ${
-            theme === "light"
-              ? "bg-green-100 border border-green-400 text-green-700"
-              : "bg-green-900/30 border border-green-500 text-green-300"
-          }`}
-        >
-          {successMessage}
-        </div>
-      )}
-
       <div
         className={`${themeClasses.container} rounded-xl shadow-2xl p-6 max-w-2xl`}
       >
+        <div className="flex flex-col items-center mb-8">
+          <div
+            className={`w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shrink-0 ${
+              theme === "light" ? "bg-indigo-100" : "bg-indigo-900/40"
+            } ring-4 ${
+              theme === "light" ? "ring-indigo-200" : "ring-indigo-800"
+            }`}
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span
+                className={`text-2xl font-semibold ${
+                  theme === "light" ? "text-indigo-600" : "text-indigo-300"
+                }`}
+              >
+                {getInitials()}
+              </span>
+            )}
+          </div>
+          <p className={`mt-3 text-sm font-medium ${themeClasses.text}`}>
+            {user.full_name || user.username}
+          </p>
+          <p className={`text-xs ${themeClasses.textSecondary}`}>
+            {getRoleLabel(user.role)}
+          </p>
+        </div>
+
         <form onSubmit={formik.handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
@@ -210,7 +224,7 @@ export default function UserProfilePage() {
                     theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                   } px-4 py-2 rounded-lg`}
                 >
-                  {user.full_name || "Chưa cập nhật"}
+                  {user.full_name || "—"}
                 </div>
               )}
             </div>
@@ -238,60 +252,6 @@ export default function UserProfilePage() {
                   } px-4 py-2 rounded-lg`}
                 >
                   {user.email}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
-              >
-                Số điện thoại
-              </label>
-              {isEditing ? (
-                <Input
-                  type="tel"
-                  value={formik.values.phone}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  name="phone"
-                  placeholder="Nhập số điện thoại"
-                  error={formik.touched.phone ? formik.errors.phone : undefined}
-                />
-              ) : (
-                <div
-                  className={`${themeClasses.text} ${
-                    theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
-                  } px-4 py-2 rounded-lg`}
-                >
-                  {(user as { phone?: string }).phone || "Chưa cập nhật"}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
-              >
-                Địa chỉ
-              </label>
-              {isEditing ? (
-                <Input
-                  type="text"
-                  value={formik.values.address}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  name="address"
-                  placeholder="Nhập địa chỉ"
-                  error={formik.touched.address ? formik.errors.address : undefined}
-                />
-              ) : (
-                <div
-                  className={`${themeClasses.text} ${
-                    theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
-                  } px-4 py-2 rounded-lg`}
-                >
-                  {(user as { address?: string }).address || "Chưa cập nhật"}
                 </div>
               )}
             </div>

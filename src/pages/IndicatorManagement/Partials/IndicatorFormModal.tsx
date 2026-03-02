@@ -18,6 +18,7 @@ interface IndicatorFormModalProps {
   isEditMode: boolean;
   form: IndicatorFormData;
   setForm: React.Dispatch<React.SetStateAction<IndicatorFormData>>;
+  errors?: Partial<Record<keyof IndicatorFormData, string>>;
   loading: boolean;
 }
 
@@ -28,6 +29,7 @@ export default function IndicatorFormModal({
   isEditMode,
   form,
   setForm,
+  errors,
   loading,
 }: IndicatorFormModalProps) {
   const { theme } = useTheme();
@@ -59,6 +61,7 @@ export default function IndicatorFormModal({
           <Input
             label="Mã *"
             value={form.code}
+            error={errors?.code}
             onChange={(e) =>
               setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))
             }
@@ -68,6 +71,7 @@ export default function IndicatorFormModal({
           <Input
             label="Tên *"
             value={form.name}
+            error={errors?.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
             placeholder="Ví dụ: Địa hình (Height/Elevation)"
           />
@@ -99,6 +103,7 @@ export default function IndicatorFormModal({
           <Input
             label="Đơn vị"
             value={form.unit}
+            error={errors?.unit}
             onChange={(e) => setForm((p) => ({ ...p, unit: e.target.value }))}
             placeholder="Ví dụ: m, mm, người/km²..."
           />

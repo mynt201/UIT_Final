@@ -12,9 +12,17 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: string;
 }
 
-export function Input({ label, error, className = "", ...props }: InputProps) {
+export function Input({
+  label,
+  error,
+  className = "",
+  required,
+  ...props
+}: InputProps) {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const showAsterisk = required || (label?.includes("*") ?? false);
+  const cleanLabel = label ? label.replace(/\s*\*+$/, "") : "";
 
   return (
     <div>
@@ -22,11 +30,13 @@ export function Input({ label, error, className = "", ...props }: InputProps) {
         <label
           className={`block text-sm font-medium mb-2 ${themeClasses.textSecondary}`}
         >
-          {label}
+          {cleanLabel}{" "}
+          {showAsterisk && <span className="text-red-500">*</span>}
         </label>
       )}
       <input
         {...props}
+        required={required}
         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-indigo-500 ${themeClasses.input} ${themeClasses.border} ${className}`}
       />
       {error && <p className={`mt-1 text-sm text-red-400`}>{error}</p>}

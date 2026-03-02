@@ -1,18 +1,27 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaSignOutAlt, FaMapMarkedAlt } from 'react-icons/fa';
-import { IoIosPrint, IoIosPodium } from 'react-icons/io';
+import { IoIosPodium } from 'react-icons/io';
 import { IoMdPerson, IoMdSettings } from 'react-icons/io';
+import type { User } from '../../../types/auth';
 import { useAuth } from '../../../contexts/AuthContext';
 import logo from '../../../assets/logo.jpg';
-import { RISK_REPORT_PATH, SETTINGS_PATH, LOGIN_PATH } from '../../../router/routePath';
+import { RISK_REPORT_PATH, SETTINGS_PATH, LOGIN_PATH, HOME_PATH } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
 
-interface SidebarProps {
-  onExportClick?: () => void;
+function getUserInitials(user: User) {
+  const name = user.full_name?.trim();
+  if (name) {
+    const parts = name.split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+  return (user.username || user.email || "U").slice(0, 2).toUpperCase();
 }
 
-export default function Sidebar({ onExportClick }: SidebarProps) {
+export default function Sidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -37,14 +46,7 @@ export default function Sidebar({ onExportClick }: SidebarProps) {
 
   const handleLogout = () => {
     logout();
-    navigate(LOGIN_PATH);
-  };
-
-  const handleExportClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onExportClick) {
-      onExportClick();
-    }
+    navigate(HOME_PATH);
   };
 
   return (
@@ -65,11 +67,28 @@ export default function Sidebar({ onExportClick }: SidebarProps) {
           </div>
         </div>
         {user && (
-          <div className={`mt-3 pt-3 border-t ${themeClasses.border}`}>
-            <p className={`text-xs ${themeClasses.textSecondary}`}>Đăng nhập bởi</p>
-            <p className={`text-sm font-medium ${themeClasses.text} mt-1`}>
-              {user.displayName || user.full_name || user.username || user.email}
-            </p>
+          <div className={`mt-3 pt-3 border-t ${themeClasses.border} flex items-center gap-3`}>
+            <div
+              className={`w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-sm font-semibold ${
+                theme === "light" ? "bg-indigo-100 text-indigo-600" : "bg-indigo-900/50 text-indigo-300"
+              }`}
+            >
+              {(user as { avatar_url?: string }).avatar_url ? (
+                <img
+                  src={(user as { avatar_url?: string }).avatar_url}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                getUserInitials(user)
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className={`text-xs ${themeClasses.textSecondary}`}>Đăng nhập bởi</p>
+              <p className={`text-sm font-medium ${themeClasses.text} truncate mt-0.5`}>
+                {user.displayName || user.full_name || user.username || user.email}
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -93,14 +112,6 @@ export default function Sidebar({ onExportClick }: SidebarProps) {
               <IoIosPodium size={20} />
               <span>Báo cáo rủi ro</span>
             </Link>
-
-            <button
-              onClick={handleExportClick}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${themeClasses.text} ${theme === 'light' ? 'hover:bg-gray-100 hover:text-gray-900' : 'hover:bg-gray-800 hover:text-white'}`}
-            >
-              <IoIosPrint size={20} />
-              <span>Xuất dữ liệu</span>
-            </button>
           </>
         )}
 

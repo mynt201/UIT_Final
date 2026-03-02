@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { Select, Button } from "../../components";
+import { settingsService } from "../../services/settingsService";
 import type { Settings } from "../../types";
+import toast from "react-hot-toast";
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
@@ -24,100 +28,59 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
-  const [settings, setSettings] = useState<Settings>(() => {
-    const savedSettings = localStorage.getItem("appSettings");
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        return { ...DEFAULT_SETTINGS, ...parsed, theme };
-      } catch (error) {
-        console.error("Failed to parse settings:", error);
-      }
-    }
-    return { ...DEFAULT_SETTINGS, theme };
+  const { settings, updateSetting, updateSettings, resetSettings: resetContext } = useSettings();
+
+  const { data: apiSettings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => settingsService.getSettings(),
+    staleTime: 30_000,
   });
-  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    // Đồng bộ theme từ context
-    setSettings((prev) => ({ ...prev, theme }));
-  }, [theme]);
-
-  useEffect(() => {
-    const savedSettings = localStorage.getItem("appSettings");
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed, theme });
-      } catch (error) {
-        console.error("Failed to parse settings:", error);
-      }
+    if (apiSettings) {
+      updateSettings({
+        theme: apiSettings.theme,
+        language: apiSettings.language,
+        fontSize: apiSettings.fontSize,
+        defaultView: apiSettings.defaultView,
+        refreshInterval: apiSettings.refreshInterval,
+        notifications: apiSettings.notifications,
+      });
     }
-  }, []);
-
-  const applySettings = (newSettings: Settings) => {
-    // Apply font size
-    document.documentElement.setAttribute(
-      "data-font-size",
-      newSettings.fontSize,
-    );
-
-    // Save to localStorage
-    localStorage.setItem("appSettings", JSON.stringify(newSettings));
-
-    // Store individual settings for backward compatibility
-    localStorage.setItem("language", newSettings.language);
-    localStorage.setItem("notifications", newSettings.notifications.toString());
-  };
+  }, [apiSettings, updateSettings]);
 
   const handleSettingChange = <K extends keyof Settings>(
     key: K,
     value: Settings[K],
   ) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
+    updateSetting(key, value);
 
-    // Nếu thay đổi theme, cập nhật context
-    if (key === "theme") {
-      setTheme(value as "light" | "dark");
+    const syncKeys: (keyof Settings)[] = ["theme", "language", "fontSize", "notifications", "defaultView", "refreshInterval"];
+    if (syncKeys.includes(key)) {
+      settingsService.updateSettings({ [key]: value }).then((ok) => {
+        if (ok) toast.success("Đã lưu cài đặt");
+        else toast.error("Không thể đồng bộ cài đặt");
+      });
+    } else {
+      toast.success("Đã áp dụng cài đặt!");
     }
-
-    applySettings(newSettings);
-    showSuccessMessage("Đã áp dụng cài đặt!");
   };
 
-  const showSuccessMessage = (message: string) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(""), 2000);
-  };
+  const handleReset = async () => {
+    resetContext();
 
-  const handleReset = () => {
-    const resetSettings = DEFAULT_SETTINGS;
-    setSettings(resetSettings);
-    setTheme(resetSettings.theme);
-    applySettings(resetSettings);
-    showSuccessMessage("Đã khôi phục cài đặt mặc định!");
+    const ok = await settingsService.resetSettings();
+    if (ok) toast.success("Đã khôi phục cài đặt mặc định!");
+    else toast.error("Không thể khôi phục trên máy chủ");
   };
 
   return (
-    <div className="w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden theme-bg-primary theme-text-primary">
-      <div className="text-2xl md:text-3xl font-bold mb-6 theme-text-primary">
+    <div className={`w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden ${themeClasses.background}`}>
+      <div className={`text-2xl md:text-3xl font-bold mb-6 ${themeClasses.text}`}>
         Cài đặt
       </div>
-
-      {successMessage && (
-        <div
-          className={`mb-4 p-3 rounded ${
-            theme === "light"
-              ? "bg-green-100 border border-green-400 text-green-700"
-              : "bg-green-900/30 border border-green-500 text-green-300"
-          }`}
-        >
-          {successMessage}
-        </div>
-      )}
 
       <div className="space-y-6">
         {/* Giao diện */}
