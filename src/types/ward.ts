@@ -1,4 +1,5 @@
 export interface WardData {
+  _id?: string;
   ward_name: string;
   geometry: {
     type: string;
@@ -12,8 +13,16 @@ export interface WardData {
   drainage_capacity: number;
   flood_risk?: number;
   risk_level?: string;
+  exposure?: number;
+  susceptibility?: number;
+  resilience?: number;
   district?: string;
   province?: string;
+  area_km2?: number;
+  population?: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WardStat {
@@ -39,4 +48,21 @@ export interface WardDetail {
   low_elevation: number;
   drainage_capacity: number;
   urban_land: number;
+}
+
+/** Chi tiết đơn vị hành chính từ DB: AdministrativeUnit + RiskAssessment + IndicatorValue */
+export interface WardDetailFromDB {
+  unit_id: string;
+  name: string;
+  area_km2: number;
+  total_score: number;
+  risk_level: string;
+  indicator_values: Array<{
+    indicator_code: string;
+    indicator_name: string;
+    unit?: string;
+    group_type?: string;
+    raw_value: number;
+    normalized_value: number;
+  }>;
 }

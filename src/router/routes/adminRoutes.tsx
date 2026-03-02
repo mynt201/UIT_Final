@@ -1,7 +1,9 @@
 import type { RouteObject } from 'react-router-dom';
 import { AdminLayout, RoleGuard } from '../../components';
+import { ADMIN_ROLES } from '../../constants/roles';
 import DashboardPage from '../../pages/Dashboard/Index';
 import DataManagementPage from '../../pages/DataManagement/Index';
+import IndicatorManagementPage from '../../pages/IndicatorManagement/Index';
 import UserManagementPage from '../../pages/UserManagement/Index';
 import StatisticsPage from '../../pages/Statistics/Index';
 import { ADMIN_PATH } from '../routePath';
@@ -14,7 +16,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: ADMIN_PATH,
     element: (
-      <RoleGuard requiredRole='admin'>
+      <RoleGuard requiredRole={ADMIN_ROLES}>
         <AdminLayout />
       </RoleGuard>
     ),
@@ -26,6 +28,10 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'data-management',
         element: <DataManagementPage />,
+      },
+      {
+        path: 'indicator-management',
+        element: <IndicatorManagementPage />,
       },
       {
         path: 'users',

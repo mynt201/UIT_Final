@@ -2,34 +2,44 @@ import { FaSearch, FaFilter } from 'react-icons/fa';
 import { Input, Select } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
+import { ROLE_OPTIONS } from '../../../constants/roles';
+import type { RoleFilterType } from '../../../constants/roles';
 
 interface SearchAndFilterProps {
   searchTerm: string;
-  roleFilter: 'all' | 'admin' | 'user';
+  roleFilter: RoleFilterType;
+  wardFilter: string;
   statusFilter: 'all' | 'active' | 'inactive';
   onSearchChange: (value: string) => void;
-  onRoleFilterChange: (value: 'all' | 'admin' | 'user') => void;
+  onRoleFilterChange: (value: RoleFilterType) => void;
+  onWardFilterChange?: (value: string) => void;
   onStatusFilterChange: (value: 'all' | 'active' | 'inactive') => void;
   disabled?: boolean;
-  isSearching?: boolean; // Indicates if search is in progress (debounced)
+  isSearching?: boolean;
+  showWardFilter?: boolean;
+  wardOptions?: { value: string; label: string }[];
 }
 
 export default function SearchAndFilter({
   searchTerm,
   roleFilter,
+  wardFilter,
   statusFilter,
   onSearchChange,
   onRoleFilterChange,
+  onWardFilterChange,
   onStatusFilterChange,
   disabled = false,
   isSearching = false,
+  showWardFilter = false,
+  wardOptions = [],
 }: SearchAndFilterProps) {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
   return (
-    <div className={` rounded-lg p-4`}>
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+    <div className='rounded-lg p-4'>
+      <div className={`grid grid-cols-1 gap-4 ${showWardFilter ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <div className='relative'>
           <FaSearch
             className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
@@ -51,25 +61,32 @@ export default function SearchAndFilter({
           />
         </div>
         <div className='relative'>
-          <FaFilter
-            className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`}
-          />
+          <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
           <Select
             options={[
               { value: 'all', label: 'Tất cả vai trò' },
-              { value: 'admin', label: 'Quản trị viên' },
-              { value: 'user', label: 'Người dùng' },
+              ...ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
             ]}
             value={roleFilter}
-            onChange={(e) => onRoleFilterChange(e.target.value as 'all' | 'admin' | 'user')}
+            onChange={(e) => onRoleFilterChange(e.target.value as RoleFilterType)}
             disabled={disabled}
             className='pl-10'
           />
         </div>
+        {showWardFilter && onWardFilterChange && (
+          <div className='relative'>
+            <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
+            <Select
+              options={[{ value: 'all', label: 'Tất cả phường' }, ...wardOptions]}
+              value={wardFilter}
+              onChange={(e) => onWardFilterChange(e.target.value)}
+              disabled={disabled}
+              className='pl-10'
+            />
+          </div>
+        )}
         <div className='relative'>
-          <FaFilter
-            className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`}
-          />
+          <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
           <Select
             options={[
               { value: 'all', label: 'Tất cả trạng thái' },

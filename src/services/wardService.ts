@@ -4,6 +4,7 @@ import type { WardData } from '../types/ward';
 export interface WardQueryParams {
   page?: number;
   limit?: number;
+  year?: number;
   district?: string;
   province?: string;
   risk_level?: string;

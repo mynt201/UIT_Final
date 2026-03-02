@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/vi";
 import { useAuth } from "../../../contexts/AuthContext";
 import { HOME_PATH } from "../../../router/routePath";
+import { getRoleLabel } from "../../../constants/roles";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
 
@@ -20,8 +21,6 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
   const { user } = useAuth();
   const themeClasses = getThemeClasses(theme);
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -54,9 +53,8 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
           </p>
         </div>
         <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
-          {!isAdmin && (
-            <button
-              onClick={handleGoToHome}
+          <button
+            onClick={handleGoToHome}
               className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 text-white rounded-lg transition-colors text-xs md:text-sm ${theme === "light"
                 ? "bg-indigo-600 hover:bg-indigo-700"
                 : "bg-indigo-500 hover:bg-indigo-600"
@@ -68,7 +66,6 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
                 Trang chủ
               </span>
             </button>
-          )}
           {onRefresh && (
             <button
               onClick={onRefresh}
@@ -109,7 +106,7 @@ export default function AdminHeader({ onRefresh }: AdminHeaderProps) {
               <p
                 className={`text-xs hidden md:block ${themeClasses.textSecondary}`}
               >
-                {user?.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                {user?.role ? getRoleLabel(user.role) : "Admin"}
               </p>
             </div>
           </div>

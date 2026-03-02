@@ -1,0 +1,468 @@
+{
+    "info": {
+        "_postman_id": "flood-risk-api-2025",
+        "name": "Flood Risk API",
+        "description": "API collection cho Flood Risk Management System - 24 phường Thủ Đức",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [{
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+        }]
+    },
+    "variable": [{
+            "key": "base_url",
+            "value": "http://localhost:3000/api"
+        },
+        {
+            "key": "token",
+            "value": ""
+        }
+    ],
+    "item": [{
+            "name": "1. Auth",
+            "item": [{
+                    "name": "Login",
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "if (pm.response.code === 200) {",
+                                "    var json = pm.response.json();",
+                                "    if (json.token) {",
+                                "        pm.collectionVariables.set('token', json.token);",
+                                "        console.log('Token đã lưu');",
+                                "    }",
+                                "}"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@floodrisk.com\",\n  \"password\": \"admin123\"\n}"
+                        },
+                        "url": "{{base_url}}/users/login",
+                        "description": "Đăng nhập - Admin: admin@floodrisk.com / admin123"
+                    }
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"ward_admin1\",\n  \"email\": \"ward@floodrisk.com\",\n  \"password\": \"Admin123\",\n  \"full_name\": \"Ward Admin\",\n  \"role\": \"WARD_ADMIN\",\n  \"ward_id\": null\n}"
+                        },
+                        "url": "{{base_url}}/users/register",
+                        "description": "Đăng ký (cần full_name, role: SUPER_ADMIN | WARD_ADMIN)"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Users",
+            "item": [{
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/users/profile"
+                    }
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Tên mới\",\n  \"email\": \"newemail@example.com\"\n}"
+                        },
+                        "url": "{{base_url}}/users/profile"
+                    }
+                },
+                {
+                    "name": "Change Password",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currentPassword\": \"admin123\",\n  \"newPassword\": \"NewPass123\"\n}"
+                        },
+                        "url": "{{base_url}}/users/change-password"
+                    }
+                },
+                {
+                    "name": "Get Users (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/users?page=1&limit=10&role=all&isActive=all",
+                            "host": ["{{base_url}}"],
+                            "path": ["users"],
+                            "query": [{
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "role",
+                                    "value": "all"
+                                },
+                                {
+                                    "key": "isActive",
+                                    "value": "all"
+                                }
+                            ]
+                        },
+                        "description": "SUPER_ADMIN only"
+                    }
+                },
+                {
+                    "name": "Get User Stats (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/users/stats",
+                        "description": "SUPER_ADMIN only"
+                    }
+                },
+                {
+                    "name": "Get User By ID (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/users/:id",
+                        "description": "SUPER_ADMIN only - thay :id bằng _id"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Administrative Units",
+            "item": [{
+                    "name": "Get All Units",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": "{{base_url}}/administrative-units/all",
+                        "description": "Public - Lấy tất cả 24 phường"
+                    }
+                },
+                {
+                    "name": "Get Units (paginated)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/administrative-units?page=1&limit=50",
+                            "host": ["{{base_url}}"],
+                            "path": ["administrative-units"],
+                            "query": [{
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Unit By ID",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": "{{base_url}}/administrative-units/:id",
+                        "description": "Thay :id bằng _id của phường"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Flood Indicators",
+            "item": [{
+                    "name": "Get Indicators",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/flood-indicators?group_type=Hazard",
+                            "host": ["{{base_url}}"],
+                            "path": ["flood-indicators"],
+                            "query": [{
+                                "key": "group_type",
+                                "value": "Hazard",
+                                "disabled": true
+                            }]
+                        },
+                        "description": "5 chỉ số: H, T, P, D, POP"
+                    }
+                },
+                {
+                    "name": "Get Indicator By ID",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": "{{base_url}}/flood-indicators/:id"
+                    }
+                },
+                {
+                    "name": "Update Weights (AHP)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"items\": [\n    { \"code\": \"H\", \"weight\": 0.424 },\n    { \"code\": \"T\", \"weight\": 0.268 },\n    { \"code\": \"P\", \"weight\": 0.163 },\n    { \"code\": \"POP\", \"weight\": 0.065 },\n    { \"code\": \"D\", \"weight\": 0.080 }\n  ]\n}"
+                        },
+                        "url": "{{base_url}}/flood-indicators/weights",
+                        "description": "SUPER_ADMIN only. Cập nhật trọng số sau AHP. Body: { items: [{ code, weight }] }"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Indicator Values",
+            "item": [{
+                    "name": "Get Values",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/indicator-values?unit_id=&indicator_id=&year=2024",
+                            "host": ["{{base_url}}"],
+                            "path": ["indicator-values"],
+                            "query": [{
+                                    "key": "unit_id",
+                                    "value": ""
+                                },
+                                {
+                                    "key": "indicator_id",
+                                    "value": ""
+                                },
+                                {
+                                    "key": "year",
+                                    "value": "2024"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Value",
+                    "request": {
+                        "method": "POST",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"unit_id\": \"<unit_id>\",\n  \"indicator_id\": \"<indicator_id>\",\n  \"data_year\": 2024,\n  \"raw_value\": 100,\n  \"normalized_value\": 0.5\n}"
+                        },
+                        "url": "{{base_url}}/indicator-values",
+                        "description": "SUPER_ADMIN, WARD_ADMIN"
+                    }
+                },
+                {
+                    "name": "Bulk Upsert Values",
+                    "request": {
+                        "method": "POST",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"items\": [\n    {\n      \"unit_id\": \"<unit_id>\",\n      \"indicator_id\": \"<indicator_id>\",\n      \"data_year\": 2024,\n      \"raw_value\": 100,\n      \"normalized_value\": 0.5\n    }\n  ]\n}"
+                        },
+                        "url": "{{base_url}}/indicator-values/bulk-upsert"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Risk Assessments",
+            "item": [{
+                    "name": "Get Assessments",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/risk-assessments?year=2024",
+                            "host": ["{{base_url}}"],
+                            "path": ["risk-assessments"],
+                            "query": [{
+                                    "key": "year",
+                                    "value": "2024"
+                                },
+                                {
+                                    "key": "unit_id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Refresh Assessments (Tính RI)",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/risk-assessments/refresh?year=2024",
+                        "description": "Tính RI = Σ(weight × normalized_value) và cập nhật risk_assessments. SUPER_ADMIN, WARD_ADMIN."
+                    }
+                },
+                {
+                    "name": "Get By Year",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": "{{base_url}}/risk-assessments/year/2024"
+                    }
+                },
+                {
+                    "name": "Get Stats",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/risk-assessments/stats?year=2024",
+                            "host": ["{{base_url}}"],
+                            "path": ["risk-assessments", "stats"],
+                            "query": [{
+                                "key": "year",
+                                "value": "2024"
+                            }]
+                        }
+                    }
+                },
+                {
+                    "name": "Upsert Assessment",
+                    "request": {
+                        "method": "POST",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"unit_id\": \"<unit_id>\",\n  \"year\": 2024,\n  \"total_score\": 5.2,\n  \"risk_level\": \"Trung bình\"\n}"
+                        },
+                        "url": "{{base_url}}/risk-assessments/upsert",
+                        "description": "risk_level: Rất thấp | Thấp | Trung bình | Cao | Rất cao"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Settings",
+            "item": [{
+                    "name": "Get Defaults",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": "{{base_url}}/settings/defaults"
+                    }
+                },
+                {
+                    "name": "Get Settings",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/settings"
+                    }
+                },
+                {
+                    "name": "Update Settings",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"theme\": \"light\",\n  \"mapDefaultZoom\": 13\n}"
+                        },
+                        "url": "{{base_url}}/settings"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "8. Map",
+            "item": [{
+                "name": "Get Flood Risk GeoJSON",
+                "request": {
+                    "auth": { "type": "noauth" },
+                    "method": "GET",
+                    "url": "{{base_url}}/map/flood-risk?year=2024",
+                    "description": "GeoJSON của các phường kèm risk_level (Rất thấp, Thấp, Trung bình, Cao, Rất cao)"
+                }
+            }]
+        },
+        {
+            "name": "9. Health",
+            "item": [{
+                "name": "Health Check",
+                "request": {
+                    "auth": {
+                        "type": "noauth"
+                    },
+                    "method": "GET",
+                    "url": "{{base_url}}/health",
+                    "description": "Kiểm tra trạng thái API và kết nối DB"
+                }
+            }]
+        }
+    ]
+}

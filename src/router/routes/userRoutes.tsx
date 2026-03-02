@@ -1,5 +1,5 @@
 import type { RouteObject } from "react-router-dom";
-import { MainLayout, RoleGuard } from "../../components";
+import { PublicLayout, RequireAuth } from "../../components";
 import PageView from "../../pages/PageView/Index";
 import RiskReportPage from "../../pages/RiskReport/Index";
 import UserProfilePage from "../../pages/UserProfile/Index";
@@ -9,11 +9,7 @@ import { HOME_PATH } from "../routePath";
 export const userRoutes: RouteObject[] = [
   {
     path: HOME_PATH,
-    element: (
-      <RoleGuard>
-        <MainLayout />
-      </RoleGuard>
-    ),
+    element: <PublicLayout />,
     children: [
       {
         index: true,
@@ -21,15 +17,27 @@ export const userRoutes: RouteObject[] = [
       },
       {
         path: "risk-report",
-        element: <RiskReportPage />,
+        element: (
+          <RequireAuth>
+            <RiskReportPage />
+          </RequireAuth>
+        ),
       },
       {
         path: "profile",
-        element: <UserProfilePage />,
+        element: (
+          <RequireAuth>
+            <UserProfilePage />
+          </RequireAuth>
+        ),
       },
       {
         path: "settings",
-        element: <SettingsPage />,
+        element: (
+          <RequireAuth>
+            <SettingsPage />
+          </RequireAuth>
+        ),
       },
     ],
   },

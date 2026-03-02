@@ -1,32 +1,87 @@
-import { mockWards } from "../PageView/Partials/mockData";
-import {
-  calcFloodRiskIndex,
-  getRiskLevel,
-  getRiskLevelLabel,
-} from "../PageView/Partials/floodRiskUtils";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { formatNumber } from "../../utils/formatUtils";
 import { Button } from "../../components";
+import { wardService } from "../../services/wardService";
+import type { WardData } from "../../types/ward";
+import toast from "react-hot-toast";
+
+type BackendRiskLevel = "Very Low" | "Low" | "Medium" | "High" | "Very High";
+type VietnameseRiskLevel = "Cao" | "Trung Bình" | "Thấp";
+
+const mapRiskLevelToVietnamese = (
+  level: BackendRiskLevel | string,
+): VietnameseRiskLevel => {
+  if (level === "Very High" || level === "High") return "Cao";
+  if (level === "Medium") return "Trung Bình";
+  return "Thấp";
+};
+
+interface WardReportData {
+  ward_name: string;
+  flood_risk: number;
+  risk_level: VietnameseRiskLevel;
+  population_density: number;
+  rainfall: number;
+  low_elevation: number;
+  urban_land: number;
+  drainage_capacity: number;
+  exposure: number;
+  susceptibility: number;
+  resilience: number;
+  district?: string;
+  province?: string;
+}
 
 export default function RiskReportPage() {
-  const wardStats = mockWards.map((ward) => {
-    const exposure = ward.population_density / 1000 + ward.rainfall / 200;
-    const susceptibility = ward.low_elevation + ward.urban_land;
-    const resilience = ward.drainage_capacity || 1;
-    const floodRisk = calcFloodRiskIndex(exposure, susceptibility, resilience);
-    const riskLevel = getRiskLevel(floodRisk);
-    const levelLabel = getRiskLevelLabel(riskLevel);
+  const { theme } = useTheme();
+  const themeClasses = getThemeClasses(theme);
 
-    return {
-      ...ward,
-      exposure,
-      susceptibility,
-      resilience,
-      flood_risk: floodRisk,
-      risk_level: levelLabel,
-    };
+  const {
+    data: wardsResponse,
+    isLoading: loadingWards,
+    error: wardsError,
+  } = useQuery({
+    queryKey: ["wards", "report"],
+    queryFn: async () => {
+      const response = await wardService.getWards({ limit: 1000 });
+      return response;
+    },
   });
+
+  const {
+    data: statsResponse,
+    isLoading: loadingStats,
+    error: statsError,
+  } = useQuery({
+    queryKey: ["wards", "stats"],
+    queryFn: () => wardService.getWardStats(),
+  });
+
+  if (wardsError || statsError) {
+    toast.error("Không thể tải dữ liệu báo cáo rủi ro");
+  }
+
+  const isLoading = loadingWards || loadingStats;
+  const wards = wardsResponse?.wards || [];
+  const stats = statsResponse?.statistics;
+
+  const wardStats: WardReportData[] = wards.map((ward: WardData) => ({
+    ward_name: ward.ward_name,
+    flood_risk: ward.flood_risk ?? 0,
+    risk_level: mapRiskLevelToVietnamese(ward.risk_level ?? "Low"),
+    population_density: ward.population_density ?? 0,
+    rainfall: ward.rainfall ?? 0,
+    low_elevation: ward.low_elevation ?? 0,
+    urban_land: ward.urban_land ?? 0,
+    drainage_capacity: ward.drainage_capacity ?? 0,
+    exposure: ward.exposure ?? 0,
+    susceptibility: ward.susceptibility ?? 0,
+    resilience: ward.resilience ?? 0,
+    district: ward.district,
+    province: ward.province,
+  }));
 
   const highRisk = wardStats.filter((w) => w.risk_level === "Cao").length;
   const mediumRisk = wardStats.filter(
@@ -35,16 +90,49 @@ export default function RiskReportPage() {
   const lowRisk = wardStats.filter((w) => w.risk_level === "Thấp").length;
 
   const avgRisk =
-    wardStats.reduce((sum, w) => sum + w.flood_risk, 0) / wardStats.length;
-  const maxRisk = Math.max(...wardStats.map((w) => w.flood_risk));
-  const avgPopulation =
-    wardStats.reduce((sum, w) => sum + w.population_density, 0) /
-    wardStats.length;
+    stats?.avgRisk ??
+    (wardStats.length > 0
+      ? wardStats.reduce((sum, w) => sum + w.flood_risk, 0) / wardStats.length
+      : 0);
+  const maxRisk =
+    stats?.maxRisk ??
+    (wardStats.length > 0
+      ? Math.max(...wardStats.map((w) => w.flood_risk))
+      : 0);
+  const avgPopulation = stats?.avgRisk
+    ? (stats.totalPopulation ?? 0) / (stats.totalWards ?? 1)
+    : wardStats.length > 0
+      ? wardStats.reduce((sum, w) => sum + w.population_density, 0) /
+        wardStats.length
+      : 0;
   const avgRainfall =
-    wardStats.reduce((sum, w) => sum + w.rainfall, 0) / wardStats.length;
+    stats?.avgRainfall ??
+    (wardStats.length > 0
+      ? wardStats.reduce((sum, w) => sum + w.rainfall, 0) / wardStats.length
+      : 0);
 
-  const { theme } = useTheme();
-  const themeClasses = getThemeClasses(theme);
+  if (isLoading) {
+    return (
+      <div className="w-full h-full p-4 md:p-6 flex items-center justify-center">
+        <div className={`text-lg ${themeClasses.text}`}>
+          Đang tải dữ liệu...
+        </div>
+      </div>
+    );
+  }
+
+  if (wardStats.length === 0) {
+    return (
+      <div className="w-full h-full p-4 md:p-6 flex items-center justify-center">
+        <div className={`text-center ${themeClasses.text}`}>
+          <h2 className="text-xl font-semibold mb-2">Chưa có dữ liệu</h2>
+          <p className={themeClasses.textSecondary}>
+            Không có dữ liệu phường/xã để hiển thị báo cáo rủi ro.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full p-4 md:p-6 flex flex-col overflow-y-auto overflow-x-hidden">
@@ -202,71 +290,74 @@ export default function RiskReportPage() {
               <tbody>
                 {wardStats
                   .sort((a, b) => b.flood_risk - a.flood_risk)
-                  .map((ward, index) => (
-                    <tr
-                      key={ward.ward_name}
-                      className={`border-b ${themeClasses.border} ${
-                        theme === "light"
-                          ? "hover:bg-gray-100"
-                          : "hover:bg-gray-800/50"
-                      } transition-colors`}
-                    >
-                      <td className={`p-3 ${themeClasses.textSecondary}`}>
-                        {index + 1}
-                      </td>
-                      <td className={`p-3 font-medium ${themeClasses.text}`}>
-                        {ward.ward_name}
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        <span className="font-bold">
-                          {ward.flood_risk.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            ward.risk_level === "Cao"
-                              ? "bg-red-500/20 text-red-400"
-                              : ward.risk_level === "Trung Bình"
-                              ? "bg-orange-300/20 text-orange-300"
-                              : "bg-green-300/20 text-green-300"
-                          }`}
+                  .map((ward, index) => {
+                    const riskLevel = ward.risk_level;
+                    return (
+                      <tr
+                        key={ward.ward_name}
+                        className={`border-b ${themeClasses.border} ${
+                          theme === "light"
+                            ? "hover:bg-gray-100"
+                            : "hover:bg-gray-800/50"
+                        } transition-colors`}
+                      >
+                        <td className={`p-3 ${themeClasses.textSecondary}`}>
+                          {index + 1}
+                        </td>
+                        <td className={`p-3 font-medium ${themeClasses.text}`}>
+                          {ward.ward_name}
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          <span className="font-bold">
+                            {ward.flood_risk.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              riskLevel === "Cao"
+                                ? "bg-red-500/20 text-red-400"
+                                : riskLevel === "Trung Bình"
+                                  ? "bg-orange-300/20 text-orange-300"
+                                  : "bg-green-300/20 text-green-300"
+                            }`}
+                          >
+                            {riskLevel}
+                          </span>
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          {ward.population_density.toLocaleString()} người/km²
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          {ward.rainfall} mm
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          {ward.low_elevation.toFixed(1)} m
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          {ward.urban_land.toFixed(1)}
+                        </td>
+                        <td className={`p-3 ${themeClasses.text}`}>
+                          {ward.drainage_capacity.toFixed(1)}
+                        </td>
+                        <td
+                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
                         >
-                          {ward.risk_level}
-                        </span>
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        {ward.population_density.toLocaleString()} người/km²
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        {ward.rainfall} mm
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        {ward.low_elevation.toFixed(1)} m
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        {ward.urban_land.toFixed(1)}
-                      </td>
-                      <td className={`p-3 ${themeClasses.text}`}>
-                        {ward.drainage_capacity.toFixed(1)}
-                      </td>
-                      <td
-                        className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                      >
-                        {ward.exposure.toFixed(2)}
-                      </td>
-                      <td
-                        className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                      >
-                        {ward.susceptibility.toFixed(2)}
-                      </td>
-                      <td
-                        className={`p-3 ${themeClasses.textSecondary} text-sm`}
-                      >
-                        {ward.resilience.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                          {ward.exposure.toFixed(2)}
+                        </td>
+                        <td
+                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
+                        >
+                          {ward.susceptibility.toFixed(2)}
+                        </td>
+                        <td
+                          className={`p-3 ${themeClasses.textSecondary} text-sm`}
+                        >
+                          {ward.resilience.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

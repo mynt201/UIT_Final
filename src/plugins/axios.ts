@@ -17,15 +17,24 @@ const axiosCreateConfig = {
 const axiosRequestInterceptor = () => {
   const onFulfilled = (config: AxiosRequestConfig) => {
     try {
-      // Skip adding auth header for public endpoints (only GET requests)
+      // Không gửi Authorization cho các endpoint public
+      const isPublicEndpoint = config.url?.includes('/users/login') || config.url?.includes('/users/register');
+      if (isPublicEndpoint) {
+        return config;
+      }
+
       const skipAuthEndpoints = [
-        '/users/login',
-        '/users/register',
-        // Public read-only APIs for role user (GET only)
+        // Public read-only APIs (GET only)
         '/wards',
         '/wards/stats',
         '/wards/risk/',
         '/wards/name/',
+        '/administrative-units',
+        '/risk-assessments',
+        '/map/flood-risk',
+        '/flood-indicators',
+        '/indicator-values',
+        '/settings',
         '/weather',
         '/weather/latest',
         '/weather/ward/',
@@ -35,7 +44,6 @@ const axiosRequestInterceptor = () => {
         '/road-bridge',
       ];
 
-      // Only skip auth for GET requests to public endpoints
       const isGetRequest = config.method?.toLowerCase() === 'get';
       const shouldSkipAuth = isGetRequest && skipAuthEndpoints.some((endpoint) => config.url?.includes(endpoint));
 
@@ -64,12 +72,11 @@ const axiosResponseInterceptor = () => {
   };
 
   const onRejected = async (error: AxiosError): Promise<never> => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid, clear auth data
+    const isLoginRequest = error.config?.url?.includes('/users/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
+      // Token expired/invalid - clear auth, không redirect khi đang gọi login
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
-
-      // Redirect to login if not already there
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

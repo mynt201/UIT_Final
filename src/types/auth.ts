@@ -1,16 +1,16 @@
+import type { UserRoleType } from '../constants/roles';
+
 export interface User {
   _id: string;
   id?: string; // For backward compatibility
   username: string;
   email: string;
-  role: "admin" | "user";
-  fullName?: string;
-  phone?: string;
-  address?: string;
-  createdAt?: string;
-  lastLogin?: string;
-  avatar?: string;
+  role: UserRoleType;
+  full_name?: string;
+  ward_id?: string | null;
   displayName?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface AuthData {
@@ -41,7 +41,7 @@ export interface RegisterResponse {
 }
 
 export interface UpdateUserProfileData {
-  fullName?: string;
+  full_name?: string;
   phone?: string;
   address?: string;
   email?: string;

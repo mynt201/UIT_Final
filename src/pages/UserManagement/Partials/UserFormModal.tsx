@@ -1,13 +1,14 @@
 import { Modal, Input, Select, Button } from '../../../components';
+import { UserRole, ROLE_OPTIONS } from '../../../constants/roles';
+import type { UserRoleType } from '../../../constants/roles';
 
 interface UserFormData {
   username: string;
   email: string;
   password: string;
-  role: 'admin' | 'user';
+  role: UserRoleType;
   fullName: string;
-  phone: string;
-  address: string;
+  ward_id: string;
 }
 
 interface UserFormModalProps {
@@ -25,6 +26,9 @@ interface UserFormModalProps {
   };
   handleFormChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   loading: boolean;
+  wardOptions?: { value: string; label: string }[];
+  canSelectRole?: boolean;
+  canSelectWard?: boolean;
 }
 
 export default function UserFormModal({
@@ -34,6 +38,9 @@ export default function UserFormModal({
   isEditMode,
   formik,
   handleFormChange,
+  wardOptions = [],
+  canSelectRole = false,
+  canSelectWard = false,
 }: UserFormModalProps) {
   return (
     <Modal
@@ -85,24 +92,31 @@ export default function UserFormModal({
           onBlur={formik.handleBlur}
           error={formik.touched.password ? formik.errors.password : undefined}
         />
-        {!isEditMode ? (
-          // Hide role field for new users (all new users are admins)
-          <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-            <p className='text-sm text-blue-700'>
-              <strong>Vai trò:</strong> Quản trị viên (tất cả người dùng mới đều là admin)
-            </p>
-          </div>
-        ) : (
+        {(canSelectRole || isEditMode) && (
           <Select
             label='Vai trò *'
             required
-            options={[
-              { value: 'user', label: 'Người dùng' },
-              { value: 'admin', label: 'Quản trị viên' },
-            ]}
+            options={ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={formik.values.role}
             onChange={(e) => formik.setFieldValue('role', e.target.value)}
             error={formik.touched.role ? formik.errors.role : undefined}
+          />
+        )}
+        {!isEditMode && !canSelectRole && (
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+            <p className='text-sm text-blue-700'>
+              <strong>Vai trò:</strong> Quản lý phường (người dùng mới thuộc phường của bạn)
+            </p>
+          </div>
+        )}
+        {canSelectWard && formik.values.role === UserRole.WARD_ADMIN && (
+          <Select
+            label='Phường'
+            required={formik.values.role === UserRole.WARD_ADMIN}
+            options={[{ value: '', label: '-- Chọn phường --' }, ...wardOptions]}
+            value={formik.values.ward_id}
+            onChange={(e) => formik.setFieldValue('ward_id', e.target.value)}
+            error={formik.touched.ward_id ? formik.errors.ward_id : undefined}
           />
         )}
         <Input
@@ -114,26 +128,6 @@ export default function UserFormModal({
           onBlur={formik.handleBlur}
           error={formik.touched.fullName ? formik.errors.fullName : undefined}
         />
-        <div className='grid grid-cols-2 gap-4'>
-          <Input
-            label='Số điện thoại'
-            type='tel'
-            name='phone'
-            value={formik.values.phone}
-            onChange={handleFormChange || formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.phone ? formik.errors.phone : undefined}
-          />
-          <Input
-            label='Địa chỉ'
-            type='text'
-            name='address'
-            value={formik.values.address}
-            onChange={handleFormChange || formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.address ? formik.errors.address : undefined}
-          />
-        </div>
       </form>
     </Modal>
   );

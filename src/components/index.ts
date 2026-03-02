@@ -10,8 +10,10 @@ export { default as FormCheckbox } from "./ui/FormCheckbox";
 // Layout Components
 export { default as AdminLayout } from "./layout/AdminLayout";
 export { default as MainLayout } from "./layout/MainLayout";
+export { default as PublicLayout } from "./layout/PublicLayout";
 export { default as AdminHeader } from "./layout/AdminHeader";
 export { default as AdminSidebar } from "./layout/AdminSidebar";
 
 // Guard Components
 export { default as RoleGuard } from "./guards/RoleGuard";
+export { default as RequireAuth } from "./guards/RequireAuth";

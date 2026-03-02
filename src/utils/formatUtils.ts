@@ -2,13 +2,13 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 /**
- * Safely format a number with Vietnamese locale
+ * Safely format a number with comma as thousands separator (dấu phẩy cho hàng nghìn)
  */
 export const formatNumber = (value: number | string | undefined | null): string => {
   if (value === undefined || value === null || isNaN(Number(value))) {
     return '0';
   }
-  return Number(value).toLocaleString('vi-VN');
+  return Number(value).toLocaleString('en-US', { maximumFractionDigits: 10 });
 };
 
 /**

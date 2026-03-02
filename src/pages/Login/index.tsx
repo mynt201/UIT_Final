@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components';
 import { Button } from '../../components';
 import { REGISTER_PATH, HOME_PATH, ADMIN_PATH } from '../../router/routePath';
+import { UserRole } from '../../constants/roles';
 
 const loginSchema = yup.object().shape({
   email: yup
@@ -34,13 +35,14 @@ const Login = () => {
     onSubmit: async (values, { setSubmitting }) => {
       try {
         const authData = await authLogin(values);
-        if (authData.role === 'admin') {
+        if (authData.role === UserRole.SUPER_ADMIN || authData.role === UserRole.WARD_ADMIN) {
           navigate(ADMIN_PATH);
         } else {
           navigate(HOME_PATH);
         }
-      } catch (err) {
-        const errorMessage = (err as Error).message || 'Sai email hoặc mật khẩu';
+      } catch (err: unknown) {
+        const ax = err as { response?: { data?: { error?: string } }; message?: string };
+        const errorMessage = ax.response?.data?.error || ax.message || 'Sai email hoặc mật khẩu';
         toast.error(errorMessage);
       } finally {
         setSubmitting(false);

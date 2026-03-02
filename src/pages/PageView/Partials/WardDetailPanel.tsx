@@ -1,101 +1,134 @@
-import { IoMdClose } from 'react-icons/io';
-import { getRiskColor } from './floodRiskUtils';
-import { useTheme } from '../../../contexts/ThemeContext';
-import { formatNumber } from '../../../utils/formatUtils';
-import type { WardDetail } from '../../../types';
+import { IoMdClose } from "react-icons/io";
+import { getRiskColor } from "./floodRiskUtils";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { formatNumber } from "../../../utils/formatUtils";
+import type { WardDetailFromDB } from "../../../types/ward";
 
 interface WardDetailPanelProps {
-  ward: WardDetail | null;
+  ward: WardDetailFromDB | null;
+  loading?: boolean;
   onClose: () => void;
 }
 
-export default function WardDetailPanel({ ward, onClose }: WardDetailPanelProps) {
-  const { theme } = useTheme();
-  
-  if (!ward) return null;
+function riskLevelToKey(level: string): "cao" | "trungBinh" | "thap" {
+  const l = level?.trim?.() ?? "";
+  if (l === "Rất cao" || l === "Cao") return "cao";
+  if (l === "Trung bình") return "trungBinh";
+  return "thap";
+}
 
-  const riskLevel =
-    ward.risk_level === 'Cao' ? 'cao' : ward.risk_level === 'Trung Bình' ? 'trungBinh' : 'thap';
-  const color = getRiskColor(riskLevel as 'cao' | 'trungBinh' | 'thap');
+export default function WardDetailPanel({
+  ward,
+  loading = false,
+  onClose,
+}: WardDetailPanelProps) {
+  const { theme } = useTheme();
+
+  if (!ward && !loading) return null;
+
+  const riskKey = ward ? riskLevelToKey(ward.risk_level) : "thap";
+  const color = getRiskColor(riskKey);
   const rgbColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 
   return (
     <div
-      className='absolute bottom-4 left-4 right-4 bg-[#0a1628] rounded-xl shadow-2xl overflow-hidden'
+      className="absolute bottom-4 left-4 right-4 bg-[#0a1628] rounded-xl shadow-2xl overflow-hidden"
       style={{ zIndex: 9999 }}
     >
-      <div className='px-6 pt-4 pb-6'>
-        <div className='flex justify-between items-center mb-6'>
-          <h2 className='text-3xl font-bold text-white'>{ward.ward_name}</h2>
+      <div className="px-6 pt-4 pb-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-white">
+            {loading ? "Đang tải..." : ward?.name ?? "—"}
+          </h2>
           <button
             onClick={onClose}
-            className='p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors'
+            className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
           >
-            <IoMdClose size={24} className='text-white' />
+            <IoMdClose size={24} className="text-white" />
           </button>
         </div>
 
-        <div className='grid grid-cols-2 gap-6'>
-          <div className='space-y-3 text-left'>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Chỉ số rủi ro:</span>{' '}
-              <span className='font-semibold text-white'>{ward.flood_risk.toFixed(2)}</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Mật độ dân số:</span>{' '}
-              <span className='font-semibold text-white'>
-                {formatNumber(ward.population_density)} người/km²
-              </span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Lượng mưa:</span>{' '}
-              <span className='font-semibold text-white'>{ward.rainfall} mm</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Độ cao thấp:</span>{' '}
-              <span className='font-semibold text-white'>{ward.low_elevation.toFixed(1)} m</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Khả năng thoát nước:</span>{' '}
-              <span className='font-semibold text-white'>{ward.drainage_capacity.toFixed(1)}</span>
-            </div>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-400" />
           </div>
+        ) : ward ? (
+          <>
+            {/* AdministrativeUnit + RiskAssessment - đúng cột DB */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="space-y-3 text-left">
+                <div className="text-white/80 text-sm">
+                  <span className="opacity-60">Tên đơn vị (name):</span>{" "}
+                  <span className="font-semibold text-white">{ward.name}</span>
+                </div>
+                <div className="text-white/80 text-sm">
+                  <span className="opacity-60">Diện tích (area_km2):</span>{" "}
+                  <span className="font-semibold text-white">
+                    {formatNumber(ward.area_km2)} km²
+                  </span>
+                </div>
+                <div className="text-white/80 text-sm">
+                  <span className="opacity-60">Tổng điểm (total_score):</span>{" "}
+                  <span className="font-semibold text-white">
+                    {Number(ward.total_score ?? 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
 
-          <div className='space-y-3 text-left'>
-            <div className='flex items-center gap-2 text-white/80 text-sm'>
-              <span className='opacity-60'>Mức độ:</span>
-              <div className='flex items-center gap-2'>
-                <div
-                  className='w-6 h-4 rounded border border-white/30'
-                  style={{ backgroundColor: rgbColor }}
-                />
-                <span className='font-semibold text-white'>{ward.risk_level}</span>
+              <div className="space-y-3 text-left">
+                <div className="flex items-center gap-2 text-white/80 text-sm">
+                  <span className="opacity-60">Mức độ (risk_level):</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-4 rounded border border-white/30"
+                      style={{ backgroundColor: rgbColor }}
+                    />
+                    <span className="font-semibold text-white">
+                      {ward.risk_level}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Đất đô thị:</span>{' '}
-              <span className='font-semibold text-white'>{ward.urban_land.toFixed(1)}</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Exposure:</span>{' '}
-              <span className='font-semibold text-white'>{ward.exposure.toFixed(2)}</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Susceptibility:</span>{' '}
-              <span className='font-semibold text-white'>{ward.susceptibility.toFixed(2)}</span>
-            </div>
-            <div className='text-white/80 text-sm'>
-              <span className='opacity-60'>Resilience:</span>{' '}
-              <span className='font-semibold text-white'>{ward.resilience.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
 
-        <button className={`w-full mt-6 py-3 text-white font-semibold rounded-lg transition-colors ${
-          theme === 'light' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'
-        }`}>
-          Xem chi tiết đánh giá rủi ro
-        </button>
+            {/* IndicatorValue - từng chỉ số theo DB */}
+            {ward.indicator_values.length > 0 && (
+              <div className="border-t border-white/20 pt-4">
+                <div className="text-white/90 text-sm font-medium mb-3">
+                  Giá trị chỉ số (IndicatorValue)
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {ward.indicator_values.map((iv) => (
+                    <div
+                      key={iv.indicator_code}
+                      className="bg-white/5 rounded-lg p-3 text-left"
+                    >
+                      <div className="text-white/70 text-xs mb-1">
+                        {iv.indicator_name}
+                        {iv.indicator_code && (
+                          <span className="opacity-80"> ({iv.indicator_code})</span>
+                        )}
+                      </div>
+                      <div className="text-white font-semibold">
+                        raw_value: {formatNumber(iv.raw_value)}
+                        {iv.unit ? ` ${iv.unit}` : ""}
+                      </div>
+                      <div className="text-white/60 text-xs mt-0.5">
+                        normalized_value: {Number(iv.normalized_value ?? 0).toFixed(4)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {ward.indicator_values.length === 0 && (
+              <div className="text-white/50 text-sm py-4">
+                Chưa có dữ liệu IndicatorValue cho đơn vị này.
+              </div>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );

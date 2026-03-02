@@ -9,9 +9,10 @@ import { getThemeClasses } from "../../utils/themeUtils";
 import { formatDate } from "../../utils/formatUtils";
 import { Input, Button } from "../../components";
 import type { UpdateUserProfileData } from "../../types";
+import { getRoleLabel, UserRole } from "../../constants/roles";
 
 const profileSchema = yup.object().shape({
-  fullName: yup.string(),
+  full_name: yup.string(),
   phone: yup.string().matches(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
   address: yup.string(),
   email: yup.string().email("Email không hợp lệ"),
@@ -24,7 +25,7 @@ export default function UserProfilePage() {
 
   const formik = useFormik({
     initialValues: {
-      fullName: "",
+      full_name: "",
       phone: "",
       address: "",
       email: "",
@@ -48,9 +49,9 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (user) {
       formik.setValues({
-        fullName: user.fullName || "",
-        phone: user.phone || "",
-        address: user.address || "",
+        full_name: user.full_name || "",
+        phone: (user as { phone?: string }).phone || "",
+        address: (user as { address?: string }).address || "",
         email: user.email || "",
       });
     }
@@ -66,9 +67,9 @@ export default function UserProfilePage() {
     setIsEditing(false);
     if (user) {
       formik.setValues({
-        fullName: user.fullName || "",
-        phone: user.phone || "",
-        address: user.address || "",
+        full_name: user.full_name || "",
+        phone: (user as { phone?: string }).phone || "",
+        address: (user as { address?: string }).address || "",
         email: user.email || "",
       });
     }
@@ -147,7 +148,7 @@ export default function UserProfilePage() {
                   theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                 } px-4 py-2 rounded-lg`}
               >
-                {user.id}
+                {user._id}
               </div>
             </div>
 
@@ -175,14 +176,14 @@ export default function UserProfilePage() {
               <div className={themeClasses.text}>
                 <span
                   className={`px-3 py-1 rounded-full text-sm inline-block ${
-                    user.role === "admin"
+                    user.role === UserRole.SUPER_ADMIN
                       ? theme === "light"
                         ? "bg-indigo-500/20 text-indigo-600"
                         : "bg-indigo-500/20 text-indigo-400"
                       : "bg-green-500/20 text-green-400"
                   }`}
                 >
-                  {user.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                  {getRoleLabel(user.role)}
                 </span>
               </div>
             </div>
@@ -196,10 +197,12 @@ export default function UserProfilePage() {
               {isEditing ? (
                 <Input
                   type="text"
-                  value={formData.fullName}
-                  onChange={(e) => handleChange("fullName", e.target.value)}
+                  value={formik.values.full_name}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  name="full_name"
                   placeholder="Nhập họ và tên"
-                  error={errors.fullName}
+                  error={formik.touched.full_name ? formik.errors.full_name : undefined}
                 />
               ) : (
                 <div
@@ -207,7 +210,7 @@ export default function UserProfilePage() {
                     theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                   } px-4 py-2 rounded-lg`}
                 >
-                  {user.fullName || "Chưa cập nhật"}
+                  {user.full_name || "Chưa cập nhật"}
                 </div>
               )}
             </div>
@@ -221,10 +224,12 @@ export default function UserProfilePage() {
               {isEditing ? (
                 <Input
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  name="email"
                   placeholder="Nhập email"
-                  error={errors.email}
+                  error={formik.touched.email ? formik.errors.email : undefined}
                 />
               ) : (
                 <div
@@ -246,10 +251,12 @@ export default function UserProfilePage() {
               {isEditing ? (
                 <Input
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
+                  value={formik.values.phone}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  name="phone"
                   placeholder="Nhập số điện thoại"
-                  error={errors.phone}
+                  error={formik.touched.phone ? formik.errors.phone : undefined}
                 />
               ) : (
                 <div
@@ -257,7 +264,7 @@ export default function UserProfilePage() {
                     theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                   } px-4 py-2 rounded-lg`}
                 >
-                  {user.phone || "Chưa cập nhật"}
+                  {(user as { phone?: string }).phone || "Chưa cập nhật"}
                 </div>
               )}
             </div>
@@ -271,10 +278,12 @@ export default function UserProfilePage() {
               {isEditing ? (
                 <Input
                   type="text"
-                  value={formData.address}
-                  onChange={(e) => handleChange("address", e.target.value)}
+                  value={formik.values.address}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  name="address"
                   placeholder="Nhập địa chỉ"
-                  error={errors.address}
+                  error={formik.touched.address ? formik.errors.address : undefined}
                 />
               ) : (
                 <div
@@ -282,7 +291,7 @@ export default function UserProfilePage() {
                     theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                   } px-4 py-2 rounded-lg`}
                 >
-                  {user.address || "Chưa cập nhật"}
+                  {(user as { address?: string }).address || "Chưa cập nhật"}
                 </div>
               )}
             </div>
@@ -298,7 +307,7 @@ export default function UserProfilePage() {
                   theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                 } px-4 py-2 rounded-lg`}
               >
-                {formatDate(user.createdAt)}
+                {formatDate(user.created_at)}
               </div>
             </div>
 
@@ -313,12 +322,12 @@ export default function UserProfilePage() {
                   theme === "light" ? "bg-gray-100" : "bg-gray-700/50"
                 } px-4 py-2 rounded-lg`}
               >
-                {formatDate(user.lastLogin)}
+                {formatDate((user as { lastLogin?: string }).lastLogin)}
               </div>
             </div>
           </div>
 
-          {errors.submit && (
+          {formik.errors.submit && (
             <div
               className={`mt-4 p-3 rounded ${
                 theme === "light"
@@ -326,7 +335,7 @@ export default function UserProfilePage() {
                   : "bg-red-900/30 border border-red-500 text-red-300"
               }`}
             >
-              {errors.submit}
+              {(formik.errors as { submit?: string }).submit}
             </div>
           )}
 
@@ -338,7 +347,7 @@ export default function UserProfilePage() {
                 variant="secondary"
                 type="button"
                 onClick={handleCancel}
-                disabled={isLoading}
+                disabled={formik.isSubmitting}
                 className="flex items-center gap-2"
               >
                 <IoMdClose size={20} />
@@ -347,11 +356,11 @@ export default function UserProfilePage() {
               <Button
                 variant="primary"
                 type="submit"
-                disabled={isLoading}
+                disabled={formik.isSubmitting}
                 className="flex items-center gap-2"
               >
                 <IoMdCheckmark size={20} />
-                <span>{isLoading ? "Đang lưu..." : "Lưu thay đổi"}</span>
+                <span>{formik.isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}</span>
               </Button>
             </div>
           )}

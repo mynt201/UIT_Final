@@ -17,6 +17,7 @@ import {
   ADMIN_PATH,
   LOGIN_PATH,
   ADMIN_DATA_MANAGEMENT_PATH,
+  ADMIN_INDICATOR_MANAGEMENT_PATH,
   ADMIN_USER_MANAGEMENT_PATH,
   ADMIN_STATISTICS_PATH,
   ADMIN_PAGE_VIEW_PATH,
@@ -139,7 +140,17 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaMapMarkedAlt size={20} />
-            <span>Quản lý dữ liệu</span>
+            <span>Quản lý Phường</span>
+          </Link>
+
+          <Link
+            to={ADMIN_INDICATOR_MANAGEMENT_PATH}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
+              ADMIN_INDICATOR_MANAGEMENT_PATH
+            )}`}
+          >
+            <FaChartLine size={20} />
+            <span>Quản lý chỉ số</span>
           </Link>
 
           <Link

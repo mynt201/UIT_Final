@@ -1,5 +1,6 @@
 import { api } from '../plugins/axios';
 import type { LoginCredentials, RegisterCredentials, User, AuthData } from '../types/auth';
+import type { UserRoleType } from '../constants/roles';
 
 // Authentication API calls
 export const authService = {
@@ -40,15 +41,16 @@ export const authService = {
   async getUsers(params?: {
     page?: number;
     limit?: number;
-    role?: string; // Single role or comma-separated multiple roles
+    role?: string; // SUPER_ADMIN | WARD_ADMIN | all
+    ward_id?: string; // Filter by ward (SUPER_ADMIN only)
     isActive?: boolean;
-    search?: string; // Search in username, email, fullName, phone, address
-    sort?: string; // createdAt, updatedAt, username, email, fullName, name, lastLogin
+    search?: string;
+    sort?: string;
     order?: 'asc' | 'desc';
-    createdFrom?: string; // ISO date string
-    createdTo?: string; // ISO date string
-    lastLoginFrom?: string; // ISO date string
-    lastLoginTo?: string; // ISO date string
+    createdFrom?: string;
+    createdTo?: string;
+    lastLoginFrom?: string;
+    lastLoginTo?: string;
   }): Promise<{
     users: User[];
     pagination: {
@@ -64,6 +66,7 @@ export const authService = {
     filters: {
       search: string | null;
       role: string | null;
+      ward_id: string | null;
       isActive: string | null;
       createdFrom: string | null;
       createdTo: string | null;
@@ -76,6 +79,12 @@ export const authService = {
     };
   }> {
     const response = await api.get('/users', { params });
+    return response.data;
+  },
+
+  // Get all administrative units (wards) for dropdown
+  async getAdministrativeUnits(): Promise<{ data: { _id: string; name: string }[] }> {
+    const response = await api.get('/administrative-units/all');
     return response.data;
   },
 
@@ -116,10 +125,15 @@ export const authService = {
     email: string;
     password: string;
     fullName?: string;
-    phone?: string;
-    address?: string;
+    full_name?: string;
+    role?: UserRoleType;
+    ward_id?: string | null;
   }): Promise<{ user: User }> {
-    const response = await api.post('/users/create-admin', userData);
+    const body = {
+      ...userData,
+      full_name: userData.full_name || userData.fullName,
+    };
+    const response = await api.post('/users/create-admin', body);
     return response.data;
   },
 };
