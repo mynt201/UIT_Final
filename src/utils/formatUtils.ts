@@ -25,13 +25,24 @@ function getDateFormat(): DateFormatKey {
 }
 
 /**
- * Safely format a number with comma as thousands separator (dấu phẩy cho hàng nghìn)
+ * Safely format a number with comma as thousands separator (dấu phẩy cho hàng nghìn).
+ * @param decimals - Optional: fix số chữ số sau dấu phẩy (e.g. 2 => 1.234,56)
  */
-export const formatNumber = (value: number | string | undefined | null): string => {
+export const formatNumber = (
+  value: number | string | undefined | null,
+  decimals?: number
+): string => {
   if (value === undefined || value === null || isNaN(Number(value))) {
-    return '0';
+    return decimals !== undefined ? (0).toFixed(decimals) : '0';
   }
-  return Number(value).toLocaleString('en-US', { maximumFractionDigits: 10 });
+  const num = Number(value);
+  if (decimals !== undefined) {
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }
+  return num.toLocaleString('en-US', { maximumFractionDigits: 10 });
 };
 
 /**

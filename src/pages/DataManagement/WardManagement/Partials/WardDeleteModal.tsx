@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal, Button } from '../../../../components';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../../utils/themeUtils';
@@ -16,6 +17,7 @@ export default function WardDeleteModal({
   onClose,
   onConfirm,
 }: WardDeleteModalProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -23,21 +25,22 @@ export default function WardDeleteModal({
     <Modal
       isOpen={!!ward}
       onClose={onClose}
-      title='Xác nhận xóa'
+      title={t('wardModal.confirmDelete')}
       maxWidth='sm'
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Hủy
+            {t('common.cancel')}
           </Button>
           <Button variant='danger' onClick={onConfirm} disabled={loading}>
-            Xóa
+            {t('common.delete')}
           </Button>
         </div>
       }
     >
       <p className={themeClasses.text}>
-        Xóa phường <strong>{ward?.name}</strong>? Hành động không thể hoàn tác.
+        {t('wardModal.deleteWardConfirmPrefix')} <strong>{ward?.name}</strong>{' '}
+        {t('wardModal.deleteWardConfirmSuffix')}
       </p>
     </Modal>
   );

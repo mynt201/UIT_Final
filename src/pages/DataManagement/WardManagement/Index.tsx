@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
@@ -37,6 +38,7 @@ import { DEFAULT_AHP_MATRIX_5 } from "./constants";
 import { Button } from "../../../components";
 
 export default function WardManagementPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { theme } = useTheme();
@@ -256,8 +258,8 @@ export default function WardManagementPage() {
       accessor: keyof WardYearIndicatorRow | string;
       render?: (value: unknown, row: WardYearIndicatorRow) => React.ReactNode;
     }> = [
-      { header: "Phường", accessor: "unit_name" },
-      { header: "Năm", accessor: "data_year" },
+      { header: t("table.ward"), accessor: "unit_name" },
+      { header: t("table.year"), accessor: "data_year" },
       ...indicatorCodes.map((c) => {
         const ind = indicators.find((i) => i.code === c);
         const indOrCode = ind ?? { code: c };
@@ -265,7 +267,7 @@ export default function WardManagementPage() {
         const unitStr = unit ? ` (${unit})` : "";
         const dir = ind?.direction ?? 1;
         return {
-          header: `${getIndicatorLabel(indOrCode)}${unitStr} [${dir === 0 ? "Nghịch" : "Thuận"}]`,
+          header: `${getIndicatorLabel(indOrCode)}${unitStr} [${dir === 0 ? t("table.directionInverse") : t("table.directionDirect")}]`,
           accessor: c,
           render: (_value: unknown, row: WardYearIndicatorRow) => {
             const v = row[c] as IndicatorCell | undefined;
@@ -288,9 +290,9 @@ export default function WardManagementPage() {
                 </div>
                 <div
                   className={`text-xs ${themeClasses.textSecondary}`}
-                  title="Chuẩn hóa"
+                  title={t("table.normalizedValue")}
                 >
-                  Giá trị chuẩn hóa → {v.normalized_value.toFixed(2)}
+                  {t("table.normalizedValue")} → {v.normalized_value.toFixed(2)}
                 </div>
               </div>
             );
@@ -300,7 +302,7 @@ export default function WardManagementPage() {
     ];
     if (isSuperAdmin) {
       cols.push({
-        header: "Thao tác",
+        header: t("table.actions"),
         accessor: "_actions",
         render: (_: unknown, row: WardYearIndicatorRow) => (
           <div className="flex justify-end gap-1">
@@ -340,6 +342,7 @@ export default function WardManagementPage() {
     }
     return cols;
   }, [
+    t,
     indicatorCodes,
     indicators,
     indicatorUnitFallback,
@@ -438,7 +441,7 @@ export default function WardManagementPage() {
       floodIndicatorService.updateWeights(items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
-      toast.success("Đã lưu trọng số AHP!");
+      toast.success(t("ahp.toastWeightsSuccess"));
       setAhpModalOpen(false);
     },
     onError: (e: unknown) => {
@@ -690,10 +693,7 @@ export default function WardManagementPage() {
   };
 
   return (
-    <div
-      className={`min-h-full ${themeClasses.background}`}
-      style={{ fontFamily: "system-ui, sans-serif" }}
-    >
+    <div className={`min-h-full ${themeClasses.background}`}>
       <div className="p-4 space-y-6">
         <WardListPanel
           wards={isWardAdmin ? allUnits : wards}

@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { IoMdClose } from "react-icons/io";
-import { getRiskColor } from "./floodRiskUtils";
+import { getRiskColor, type RiskLevelKey } from "./floodRiskUtils";
 import { formatNumber } from "../../../utils/formatUtils";
 import type { WardDetailFromDB } from "../../../types/ward";
 
@@ -9,13 +10,11 @@ interface WardDetailPanelProps {
   onClose: () => void;
 }
 
-function riskLevelToKey(
-  level: string,
-): "cao" | "trungBinh" | "thap" | "chuaCoDuLieu" {
+function riskLevelToKey(level: string): RiskLevelKey {
   const l = level?.trim?.() ?? "";
   if (l === "Rất cao" || l === "Cao") return "cao";
   if (l === "Trung bình") return "trungBinh";
-  if (l === "Chưa có dữ liệu") return "chuaCoDuLieu";
+  if (l === "Chưa có dữ liệu") return null;
   return "thap";
 }
 
@@ -24,6 +23,7 @@ export default function WardDetailPanel({
   loading = false,
   onClose,
 }: WardDetailPanelProps) {
+  const { t } = useTranslation();
   if (!ward && !loading) return null;
 
   const riskKey = ward ? riskLevelToKey(ward.risk_level) : "thap";
@@ -39,7 +39,7 @@ export default function WardDetailPanel({
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-black">
             {loading
-              ? `Đang tải ${ward?.name ? ward.name + "..." : "..."}`
+              ? `${t("pageView.detail.loadingWard")} ${ward?.name ? ward.name + "..." : "..."}`
               : (ward?.name ?? "—")}
           </h2>
           <button
@@ -57,7 +57,7 @@ export default function WardDetailPanel({
             </div>
             {ward?.name && (
               <p className="text-center text-gray-500 text-sm">
-                Đang tải chi tiết và chỉ số...
+                {t("pageView.detail.loadingDetail")}
               </p>
             )}
           </div>
@@ -67,17 +67,17 @@ export default function WardDetailPanel({
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div className="space-y-3 text-left">
                 <div className="text-gray-700 text-sm">
-                  <span className="text-gray-500">Tên phường:</span>{" "}
+                  <span className="text-gray-500">{t("pageView.detail.wardName")}</span>{" "}
                   <span className="font-semibold text-black">{ward.name}</span>
                 </div>
                 <div className="text-gray-700 text-sm">
-                  <span className="text-gray-500">Diện tích:</span>{" "}
+                  <span className="text-gray-500">{t("pageView.detail.area")}</span>{" "}
                   <span className="font-semibold text-black">
                     {formatNumber(ward.area_km2)} km²
                   </span>
                 </div>
                 <div className="text-gray-700 text-sm">
-                  <span className="text-gray-500">Tổng điểm rủi ro:</span>{" "}
+                  <span className="text-gray-500">{t("pageView.detail.totalScore")}</span>{" "}
                   <span className="font-semibold text-black">
                     {ward.total_score != null
                       ? Number(ward.total_score).toFixed(2)
@@ -88,7 +88,7 @@ export default function WardDetailPanel({
 
               <div className="space-y-3 text-left">
                 <div className="flex items-center gap-2 text-gray-700 text-sm">
-                  <span className="text-gray-500">Mức độ rủi ro:</span>
+                  <span className="text-gray-500">{t("pageView.detail.riskLevel")}</span>
                   <div className="flex items-center gap-2">
                     <div
                       className="w-6 h-4 rounded border border-gray-300"
@@ -106,7 +106,7 @@ export default function WardDetailPanel({
             {ward.indicator_values.length > 0 && (
               <div className="border-t border-gray-200 pt-4">
                 <div className="text-gray-800 text-sm font-medium mb-3">
-                  Giá trị chỉ số (IndicatorValue)
+                  {t("pageView.detail.indicatorValues")}
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {ward.indicator_values.map((iv) => (
@@ -128,7 +128,7 @@ export default function WardDetailPanel({
                         {iv.unit ? ` ${iv.unit}` : ""}
                       </div>
                       <div className="text-gray-500 text-xs mt-0.5 break-words overflow-hidden min-w-0">
-                        Giá trị chuẩn hoá:{" "}
+                        {t("pageView.detail.normalizedValue")}{" "}
                         {Number(iv.normalized_value ?? 0).toFixed(4)}
                       </div>
                     </div>
@@ -139,7 +139,7 @@ export default function WardDetailPanel({
 
             {ward.indicator_values.length === 0 && (
               <div className="text-gray-500 text-sm py-4">
-                Chưa có dữ liệu IndicatorValue cho đơn vị này.
+                {t("pageView.detail.noIndicatorData")}
               </div>
             )}
           </>

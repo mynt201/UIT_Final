@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { IoMdColorFilter, IoMdCheckmark, IoMdClose } from "react-icons/io";
 import { useFormik } from "formik";
 import toast from "react-hot-toast";
@@ -11,14 +12,15 @@ import { formatDate } from "../../utils/formatUtils";
 import { Input, Button } from "../../components";
 import { getRoleLabel, UserRole } from "../../constants/roles";
 
-const profileSchema = yup.object().shape({
-  full_name: yup.string(),
-  email: yup.string().email("Email không hợp lệ"),
-});
-
 export default function UserProfilePage() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+
+  const profileSchema = yup.object().shape({
+    full_name: yup.string(),
+    email: yup.string().email(t("profile.emailInvalid")),
+  });
 
   const formik = useFormik({
     initialValues: {
@@ -31,11 +33,11 @@ export default function UserProfilePage() {
         if (!user) return;
 
         await updateUser(values);
-        toast.success("Cập nhật thông tin thành công!");
+        toast.success(t("profile.updateSuccess"));
         setIsEditing(false);
       } catch (err) {
         console.error("Update failed:", err);
-        toast.error("Không thể cập nhật thông tin");
+        toast.error(t("profile.updateFailed"));
       } finally {
         setSubmitting(false);
       }
@@ -76,9 +78,9 @@ export default function UserProfilePage() {
     return (
       <div className="w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden">
         <div className={`${themeClasses.text} text-2xl md:text-3xl mb-6`}>
-          Thông tin cá nhân
+          {t("profile.title")}
         </div>
-        <div className={themeClasses.text}>Đang tải thông tin...</div>
+        <div className={themeClasses.text}>{t("profile.loadingProfile")}</div>
       </div>
     );
   }
@@ -100,7 +102,7 @@ export default function UserProfilePage() {
     <div className="w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className={`${themeClasses.text} text-2xl md:text-3xl font-bold`}>
-          Thông tin cá nhân
+          {t("profile.title")}
         </div>
         {!isEditing && (
           <Button
@@ -109,7 +111,7 @@ export default function UserProfilePage() {
             className="flex items-center gap-2"
           >
             <IoMdColorFilter size={20} />
-            <span>Chỉnh sửa</span>
+            <span>{t("profile.edit")}</span>
           </Button>
         )}
       </div>
@@ -155,7 +157,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                ID người dùng
+                {t("profile.userId")}
               </label>
               <div
                 className={`${themeClasses.text} ${
@@ -170,7 +172,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Tên người dùng
+                {t("profile.username")}
               </label>
               <div
                 className={`${themeClasses.text} ${
@@ -185,7 +187,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Vai trò
+                {t("profile.role")}
               </label>
               <div className={themeClasses.text}>
                 <span
@@ -206,7 +208,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Họ và tên
+                {t("profile.fullName")}
               </label>
               {isEditing ? (
                 <Input
@@ -215,7 +217,7 @@ export default function UserProfilePage() {
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   name="full_name"
-                  placeholder="Nhập họ và tên"
+                  placeholder={t("profile.placeholderName")}
                   error={formik.touched.full_name ? formik.errors.full_name : undefined}
                 />
               ) : (
@@ -233,7 +235,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Email
+                {t("profile.email")}
               </label>
               {isEditing ? (
                 <Input
@@ -242,7 +244,7 @@ export default function UserProfilePage() {
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   name="email"
-                  placeholder="Nhập email"
+                  placeholder={t("profile.placeholderEmail")}
                   error={formik.touched.email ? formik.errors.email : undefined}
                 />
               ) : (
@@ -260,7 +262,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Ngày tạo tài khoản
+                {t("profile.createdAt")}
               </label>
               <div
                 className={`${themeClasses.text} ${
@@ -275,7 +277,7 @@ export default function UserProfilePage() {
               <label
                 className={`block text-sm mb-2 ${themeClasses.textSecondary}`}
               >
-                Lần đăng nhập cuối
+                {t("profile.lastLogin")}
               </label>
               <div
                 className={`${themeClasses.text} ${
@@ -311,7 +313,7 @@ export default function UserProfilePage() {
                 className="flex items-center gap-2"
               >
                 <IoMdClose size={20} />
-                <span>Hủy</span>
+                <span>{t("common.cancel")}</span>
               </Button>
               <Button
                 variant="primary"
@@ -320,7 +322,7 @@ export default function UserProfilePage() {
                 className="flex items-center gap-2"
               >
                 <IoMdCheckmark size={20} />
-                <span>{formik.isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}</span>
+                <span>{formik.isSubmitting ? t("profile.saving") : t("profile.saveChanges")}</span>
               </Button>
             </div>
           )}

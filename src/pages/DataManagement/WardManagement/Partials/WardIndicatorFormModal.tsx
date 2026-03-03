@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../../utils/themeUtils';
 import { Input, Modal, Button, Select } from '../../../../components';
@@ -31,11 +32,12 @@ export default function WardIndicatorFormModal({
   onChange,
   onSubmit,
 }: WardIndicatorFormModalProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
   const unitOptions = [
-    { value: '', label: '-- Chọn phường --' },
+    { value: '', label: t('wardModal.selectWard') },
     ...allUnits.map((u) => ({ value: u._id, label: u.name })),
   ];
 
@@ -48,8 +50,8 @@ export default function WardIndicatorFormModal({
     .join(', ');
 
   const title = isEdit
-    ? `Chỉnh sửa chỉ số — Đơn vị: ${unitsStr}`
-    : `Thêm chỉ số theo phường và năm — Đơn vị: ${unitsStr}`;
+    ? t('wardModal.editIndicator', { units: unitsStr })
+    : t('wardModal.addIndicator', { units: unitsStr });
 
   const thuậnCodes = indicatorCodes.filter(
     (c) => (indicators.find((i) => i.code === c)?.direction ?? 1) === 1
@@ -67,10 +69,10 @@ export default function WardIndicatorFormModal({
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Hủy
+            {t('common.cancel')}
           </Button>
           <Button variant='primary' onClick={onSubmit} disabled={loading}>
-            Lưu
+            {t('common.save')}
           </Button>
         </div>
       }

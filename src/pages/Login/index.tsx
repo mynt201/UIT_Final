@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components';
@@ -8,23 +10,28 @@ import { Button } from '../../components';
 import { REGISTER_PATH, HOME_PATH, ADMIN_PATH } from '../../router/routePath';
 import { UserRole } from '../../constants/roles';
 
-const loginSchema = yup.object().shape({
-  email: yup
-    .string()
-    .required('Email là bắt buộc')
-    .matches(
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-      'Email không đúng định dạng (ví dụ: user@example.com)'
-    ),
-  password: yup
-    .string()
-    .required('Mật khẩu là bắt buộc')
-    .min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-});
-
 const Login = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login: authLogin, isLoading } = useAuth();
+
+  const loginSchema = useMemo(
+    () =>
+      yup.object().shape({
+        email: yup
+          .string()
+          .required(t('login.emailRequired'))
+          .matches(
+            /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            t('login.emailInvalid')
+          ),
+        password: yup
+          .string()
+          .required(t('login.passwordRequired'))
+          .min(6, t('login.passwordMin')),
+      }),
+    [t]
+  );
 
   const formik = useFormik({
     initialValues: {
@@ -42,7 +49,7 @@ const Login = () => {
         }
       } catch (err: unknown) {
         const ax = err as { response?: { data?: { error?: string } }; message?: string };
-        const errorMessage = ax.response?.data?.error || ax.message || 'Sai email hoặc mật khẩu';
+        const errorMessage = ax.response?.data?.error || ax.message || t('login.loginError');
         toast.error(errorMessage);
       } finally {
         setSubmitting(false);
@@ -54,15 +61,15 @@ const Login = () => {
     <div className='container px-4 mx-auto min-h-screen flex items-center justify-center '>
       <div className='max-w-lg w-full bg-white p-8 rounded-lg shadow-lg'>
         <div className='text-center mb-6'>
-          <h2 className='text-3xl md:text-4xl font-extrabold text-gray-800'>Đăng nhập</h2>
+          <h2 className='text-3xl md:text-4xl font-extrabold text-gray-800'>{t('login.title')}</h2>
         </div>
 
         <form onSubmit={formik.handleSubmit}>
           <div className='mb-6'>
             <Input
-              label='Email'
+              label={t('login.email')}
               type='email'
-              placeholder='Email'
+              placeholder={t('login.email')}
               name='email'
               value={formik.values.email}
               onChange={formik.handleChange}
@@ -73,7 +80,7 @@ const Login = () => {
 
           <div className='mb-6'>
             <Input
-              label='Mật khẩu'
+              label={t('login.password')}
               type='password'
               placeholder='**********'
               name='password'
@@ -85,13 +92,13 @@ const Login = () => {
           </div>
 
           <Button type='submit' className='w-full' disabled={isLoading || formik.isSubmitting}>
-            {isLoading || formik.isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {isLoading || formik.isSubmitting ? t('login.loggingIn') : t('login.submit')}
           </Button>
 
           <p className='text-center font-extrabold mt-4 text-gray-600'>
-            Bạn chưa có tài khoản?{' '}
+            {t('login.noAccount')}{' '}
             <Link className='text-red-500 hover:underline' to={REGISTER_PATH}>
-              Đăng ký
+              {t('login.register')}
             </Link>
           </p>
         </form>

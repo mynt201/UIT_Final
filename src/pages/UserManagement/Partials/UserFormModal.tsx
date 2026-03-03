@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal, Input, Select, Button } from '../../../components';
 import { UserRole, ROLE_OPTIONS } from '../../../constants/roles';
 import type { UserRoleType } from '../../../constants/roles';
@@ -42,19 +43,20 @@ export default function UserFormModal({
   canSelectRole = false,
   canSelectWard = false,
 }: UserFormModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
+      title={isEditMode ? t('userManagement.editUser') : t('userManagement.addUserNew')}
       maxWidth='2xl'
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Hủy
+            {t('common.cancel')}
           </Button>
           <Button variant='primary' onClick={() => onSubmit()} type='submit'>
-            {isEditMode ? 'Cập nhật' : 'Thêm mới'}
+            {isEditMode ? t('common.update') : t('userManagement.addNew')}
           </Button>
         </div>
       }
@@ -62,7 +64,7 @@ export default function UserFormModal({
       <form onSubmit={onSubmit as React.FormEventHandler} className='space-y-4'>
         <div className='grid grid-cols-2 gap-4'>
           <Input
-            label='Tên người dùng *'
+            label={t('userManagement.formUsername')}
             type='text'
             required
             name='username'
@@ -72,7 +74,7 @@ export default function UserFormModal({
             error={formik.touched.username ? formik.errors.username : undefined}
           />
           <Input
-            label='Email *'
+            label={t('userManagement.formEmail')}
             type='email'
             required
             name='email'
@@ -83,7 +85,7 @@ export default function UserFormModal({
           />
         </div>
         <Input
-          label={isEditMode ? 'Mật khẩu (để trống nếu không đổi)' : 'Mật khẩu *'}
+          label={isEditMode ? t('userManagement.formPasswordOptional') : t('userManagement.formPassword')}
           type='password'
           required={!isEditMode}
           name='password'
@@ -94,7 +96,7 @@ export default function UserFormModal({
         />
         {(canSelectRole || isEditMode) && (
           <Select
-            label='Vai trò *'
+            label={t('userManagement.formRoleRequired')}
             required
             options={ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={formik.values.role}
@@ -105,22 +107,22 @@ export default function UserFormModal({
         {!isEditMode && !canSelectRole && (
           <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <p className='text-sm text-blue-700'>
-              <strong>Vai trò:</strong> Quản lý phường (người dùng mới thuộc phường của bạn)
+              {t('userManagement.roleWardAdminHint')}
             </p>
           </div>
         )}
         {canSelectWard && formik.values.role === UserRole.WARD_ADMIN && (
           <Select
-            label='Phường'
+            label={t('userManagement.formWard')}
             required={formik.values.role === UserRole.WARD_ADMIN}
-            options={[{ value: '', label: '-- Chọn phường --' }, ...wardOptions]}
+            options={[{ value: '', label: t('userManagement.formWardSelect') }, ...wardOptions]}
             value={formik.values.ward_id}
             onChange={(e) => formik.setFieldValue('ward_id', e.target.value)}
             error={formik.touched.ward_id ? formik.errors.ward_id : undefined}
           />
         )}
         <Input
-          label='Họ tên'
+          label={t('userManagement.formFullName')}
           type='text'
           name='fullName'
           value={formik.values.fullName}

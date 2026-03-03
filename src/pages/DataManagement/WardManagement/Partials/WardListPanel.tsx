@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FaMapMarkedAlt, FaEdit, FaTrash, FaPlus, FaSync } from 'react-icons/fa';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../../utils/themeUtils';
@@ -33,6 +34,7 @@ export default function WardListPanel({
   onDelete,
   onPageChange,
 }: WardListPanelProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -43,14 +45,14 @@ export default function WardListPanel({
       <div className='px-5 py-4 border-b flex items-center justify-between'>
         <h2 className={`font-semibold text-lg flex items-center gap-2 ${themeClasses.text}`}>
           <FaMapMarkedAlt size={20} className='text-indigo-500' />
-          Danh sách Phường
+          {t('wardList.title')}
         </h2>
         <div className='flex items-center gap-2'>
           <button
             onClick={onRefresh}
             disabled={loading}
             className='p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50'
-            title='Làm mới'
+            title={t('wardList.refresh')}
           >
             <FaSync className={loading ? 'animate-spin' : ''} />
           </button>
@@ -60,7 +62,7 @@ export default function WardListPanel({
               className='flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium'
             >
               <FaPlus size={14} />
-              Thêm
+              {t('common.add')}
             </Button>
           )}
         </div>

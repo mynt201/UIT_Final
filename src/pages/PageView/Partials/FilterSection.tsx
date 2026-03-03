@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { FormCheckbox, Select } from "../../../components";
 import { options } from "../constants";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -21,8 +22,13 @@ export default function FilterSection({
   selectedRiskLevels,
   onRiskLevelChange,
 }: FilterSectionProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+  const optionsWithLabels = options.map((opt) => ({
+    ...opt,
+    label: t(opt.labelKey),
+  }));
 
   return (
     <div
@@ -31,7 +37,7 @@ export default function FilterSection({
       <div className="flex flex-row gap-4 md:gap-6 flex-wrap">
         <div className="shrink-0">
           <div className={`${themeClasses.text} text-xs font-medium mb-1`}>
-            Năm đánh giá
+            {t("pageView.filterYear")}
           </div>
           <Select
             options={YEAR_OPTIONS}
@@ -42,11 +48,11 @@ export default function FilterSection({
         </div>
         <div className="shrink-0">
           <div className={`${themeClasses.text} text-xs font-medium mb-1`}>
-            Lọc theo mức độ
+            {t("pageView.filterByLevel")}
           </div>
           <div className="w-auto">
             <FormCheckbox
-              options={options.map((opt) => ({
+              options={optionsWithLabels.map((opt) => ({
                 ...opt,
                 checked: selectedRiskLevels.includes(opt.value),
                 onChange: () => {

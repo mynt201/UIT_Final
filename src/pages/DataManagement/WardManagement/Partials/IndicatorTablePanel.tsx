@@ -6,6 +6,7 @@ import {
   FaFileDownload,
 } from "react-icons/fa";
 import { useTheme } from "../../../../contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { getThemeClasses } from "../../../../utils/themeUtils";
 import { Button, Select, Table } from "../../../../components";
 import type { WardYearIndicatorRow } from "../types";
@@ -75,15 +76,16 @@ export default function IndicatorTablePanel({
   onCsvUpload,
 }: IndicatorTablePanelProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const themeClasses = getThemeClasses(theme);
 
   const wardOptions = [
-    ...(isSuperAdmin ? [{ value: "", label: "Tất cả phường" }] : []),
+    ...(isSuperAdmin ? [{ value: "", label: t('wardManagement.allWards') }] : []),
     ...allUnits.map((u) => ({ value: u._id, label: u.name })),
   ];
 
   const yearOptions = [
-    { value: "", label: "Tất cả năm" },
+    { value: "", label: t('wardManagement.allYears') },
     ...YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) })),
   ];
 
@@ -96,7 +98,7 @@ export default function IndicatorTablePanel({
           className={`font-semibold text-lg flex items-center gap-2 ${themeClasses.text}`}
         >
           <FaChartLine size={20} className="text-amber-500" />
-          Chỉ số Rủi ro
+          {t('wardManagement.riskIndicators')}
           {selectedWardName && (
             <span className="text-sm font-normal text-indigo-600 dark:text-indigo-400">
               — {selectedWardName}
@@ -124,7 +126,7 @@ export default function IndicatorTablePanel({
             onClick={onRefresh}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"
-            title="Làm mới"
+            title={t('wardManagement.refresh')}
           >
             <FaSync className={loading ? "animate-spin" : ""} />
           </button>
@@ -136,7 +138,7 @@ export default function IndicatorTablePanel({
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium disabled:opacity-50"
               >
                 <FaFileDownload size={14} />
-                Tải template
+                {t('wardManagement.downloadTemplate')}
               </Button>
               <label
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer ${
@@ -146,7 +148,7 @@ export default function IndicatorTablePanel({
                 } text-white ${isUploading ? "opacity-50" : ""}`}
               >
                 <FaUpload size={14} />
-                Upload CSV
+                {t('wardManagement.uploadCsv')}
                 <input
                   type="file"
                   accept=".csv"
@@ -163,7 +165,7 @@ export default function IndicatorTablePanel({
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium"
             >
               <FaPlus size={14} />
-              Thêm
+              {t('wardManagement.add')}
             </Button>
           )}
           {isSuperAdmin && (
@@ -171,18 +173,19 @@ export default function IndicatorTablePanel({
               <Button
                 onClick={onAhpOpen}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium"
+                title={t('ahp.tooltip')}
               >
                 <FaChartLine size={14} />
-                AHP
+                {t('ahp.buttonLabel')}
               </Button>
               <Button
                 onClick={onRefreshAssessments}
                 disabled={isRefreshing}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium"
-                title="Tính RI = Σ(weight × normalized_value) và cập nhật risk_assessments"
+                title={t('wardManagement.refreshAssessmentsTitle')}
               >
                 <FaSync className={isRefreshing ? "animate-spin" : ""} />
-                Tính lại đánh giá
+                {t('wardManagement.refreshAssessments')}
               </Button>
             </>
           )}
@@ -194,8 +197,8 @@ export default function IndicatorTablePanel({
           data={pageData}
           emptyMessage={
             loading
-              ? "Đang tải..."
-              : "Chưa có chỉ số. Chọn phường và thêm dữ liệu."
+              ? t('wardManagement.loading')
+              : t('wardManagement.noIndicatorData')
           }
         />
         {totalPages > 1 && (
@@ -208,7 +211,11 @@ export default function IndicatorTablePanel({
               ‹
             </Button>
             <span className="px-3 py-1 text-sm">
-              {pagination.page} / {totalPages} — {totalRows} bản ghi
+              {t('wardManagement.recordsCount', {
+                page: pagination.page,
+                totalPages,
+                totalRows,
+              })}
             </span>
             <button
               onClick={() => onPageChange(pagination.page + 1)}

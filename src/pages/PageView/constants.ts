@@ -1,6 +1,7 @@
+/** labelKey: i18n key for pageView risk level (e.g. pageView.riskLevelCao) */
 export const options = [
-  { label: 'Cao', value: 'cao' },
-  { label: 'Trung Bình', value: 'trungBinh' },
-  { label: 'Thấp', value: 'thap' },
-  { label: 'Chưa có dữ liệu', value: 'chuaCoDuLieu' },
+  { labelKey: 'pageView.riskLevelCao', value: 'cao' },
+  { labelKey: 'pageView.riskLevelTrungBinh', value: 'trungBinh' },
+  { labelKey: 'pageView.riskLevelThap', value: 'thap' },
+  { labelKey: 'pageView.riskLevelChuaCoDuLieu', value: 'chuaCoDuLieu' },
 ];

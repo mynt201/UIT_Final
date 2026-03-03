@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FaSync, FaTable } from "react-icons/fa";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
@@ -9,6 +10,7 @@ import { administrativeUnitService } from "../../services/administrativeUnitServ
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../constants/roles";
 import { Button, Table, Select } from "../../components";
+import { formatNumber } from "../../utils/formatUtils";
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
   Thấp: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -17,6 +19,7 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
 };
 
 export default function RiskAssessmentManagementPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { theme } = useTheme();
@@ -59,7 +62,7 @@ export default function RiskAssessmentManagementPage() {
   const refreshMutation = useMutation({
     mutationFn: (yr: number) => riskAssessmentService.refreshAssessments(yr),
     onSuccess: (_, yr) => {
-      toast.success(`Đã tính lại đánh giá năm ${yr}`);
+      toast.success(t("riskAssessment.toastRefreshSuccess", { year: yr }));
       queryClient.invalidateQueries({ queryKey: ["risk-assessments"] });
     },
     onError: (e: unknown) => {
@@ -67,7 +70,7 @@ export default function RiskAssessmentManagementPage() {
       toast.error(
         err?.response?.data?.error ||
           err?.message ||
-          "Lỗi khi tính lại đánh giá",
+          t("riskAssessment.toastRefreshError"),
       );
     },
   });
@@ -76,34 +79,35 @@ export default function RiskAssessmentManagementPage() {
     ? allUnits.filter((u) => u._id === wardAdminUnitId)
     : allUnits;
 
-  const columns = [
-    {
-      header: "Phường",
-      accessor: "unit_id" as const,
-      render: (_: unknown, row: (typeof assessments)[0]) =>
-        typeof row.unit_id === "object" && row.unit_id?.name
-          ? row.unit_id.name
-          : "—",
-    },
-    {
-      header: "Năm",
-      accessor: "year" as const,
-      render: (v: unknown) => (
-        <span className="font-medium">{String(v ?? "—")}</span>
-      ),
-    },
-    {
-      header: "Điểm rủi ro",
-      accessor: "total_score" as const,
+  const columns = useMemo(
+    () => [
+      {
+        header: t("riskAssessment.colWard"),
+        accessor: "unit_id" as const,
+        render: (_: unknown, row: (typeof assessments)[0]) =>
+          typeof row.unit_id === "object" && row.unit_id?.name
+            ? row.unit_id.name
+            : "—",
+      },
+      {
+        header: t("riskAssessment.colYear"),
+        accessor: "year" as const,
         render: (v: unknown) => (
-        <span className="font-mono">
-          {typeof v === "number" ? v.toFixed(4) : "—"}
-        </span>
-      ),
-    },
-    {
-      header: "Mức độ",
-      accessor: "risk_level" as const,
+          <span className="font-medium">{String(v ?? "—")}</span>
+        ),
+      },
+      {
+        header: t("riskAssessment.colScore"),
+        accessor: "total_score" as const,
+        render: (v: unknown) => (
+          <span>
+            {typeof v === "number" ? formatNumber(v, 2) : "—"}
+          </span>
+        ),
+      },
+      {
+        header: t("riskAssessment.colLevel"),
+        accessor: "risk_level" as const,
       render: (v: unknown) => {
         const level = String(v ?? "");
         const colorClass = RISK_LEVEL_COLORS[level] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
@@ -116,19 +120,18 @@ export default function RiskAssessmentManagementPage() {
         );
       },
     },
-  ];
+  ],
+    [t, assessments]
+  );
 
   return (
-    <div
-      className={`min-h-full ${themeClasses.background}`}
-      style={{ fontFamily: "system-ui, sans-serif" }}
-    >
+    <div className={`min-h-full ${themeClasses.background}`}>
       <div className="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex items-center gap-2">
             <FaTable className="text-indigo-500" size={24} />
             <h1 className={`text-xl font-bold ${themeClasses.text}`}>
-              Quản lý đánh giá rủi ro
+              {t("riskAssessment.title")}
             </h1>
           </div>
         </div>
@@ -139,9 +142,9 @@ export default function RiskAssessmentManagementPage() {
         >
           <div className="flex flex-wrap gap-4 items-end">
             <Select
-              label="Năm"
+              label={t("riskAssessment.filterYear")}
               options={[
-                { value: "all", label: "Tất cả" },
+                { value: "all", label: t("riskAssessment.all") },
                 ...[currentYear + 1, currentYear, currentYear - 1, currentYear - 2].map(
                   (y) => ({ value: String(y), label: String(y) })
                 ),
@@ -154,9 +157,9 @@ export default function RiskAssessmentManagementPage() {
             />
             {!isWardAdmin && (
               <Select
-                label="Phường"
+                label={t("riskAssessment.filterWard")}
                 options={[
-                  { value: "", label: "Tất cả" },
+                  { value: "", label: t("riskAssessment.all") },
                   ...unitOptions.map((u) => ({ value: u._id, label: u.name })),
                 ]}
                 value={unitFilter}
@@ -165,12 +168,12 @@ export default function RiskAssessmentManagementPage() {
               />
             )}
             <Select
-              label="Mức độ"
+              label={t("riskAssessment.filterLevel")}
               options={[
-                { value: "", label: "Tất cả" },
-                { value: "Thấp", label: "Thấp" },
-                { value: "Trung bình", label: "Trung bình" },
-                { value: "Cao", label: "Cao" },
+                { value: "", label: t("riskAssessment.all") },
+                { value: "Thấp", label: t("pageView.riskLevelThap") },
+                { value: "Trung bình", label: t("pageView.riskLevelTrungBinh") },
+                { value: "Cao", label: t("pageView.riskLevelCao") },
               ]}
               value={riskLevelFilter}
               onChange={(e) => setRiskLevelFilter(e.target.value)}
@@ -189,7 +192,7 @@ export default function RiskAssessmentManagementPage() {
                 className={refreshMutation.isPending ? "animate-spin" : ""}
                 size={16}
               />
-              Tính lại đánh giá
+              {t("riskAssessment.refreshBtn")}
             </Button>
           </div>
         </div>
@@ -199,11 +202,10 @@ export default function RiskAssessmentManagementPage() {
           className={`rounded-lg border overflow-hidden ${themeClasses.border}`}
         >
           {isLoading ? (
-            <div className="p-8 text-center text-gray-500">Đang tải...</div>
+            <div className="p-8 text-center text-gray-500">{t("riskAssessment.loading")}</div>
           ) : assessments.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              Chưa có dữ liệu đánh giá. Bấm &quot;Tính lại đánh giá&quot; sau khi đã có
-              chỉ số phường.
+              {t("riskAssessment.empty")}
             </div>
           ) : (
             <Table columns={columns} data={assessments} />

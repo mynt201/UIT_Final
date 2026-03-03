@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal, Button } from '../../../../components';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../../utils/themeUtils';
@@ -18,6 +19,7 @@ export default function WardIndicatorDeleteModal({
   onClose,
   onConfirm,
 }: WardIndicatorDeleteModalProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -25,21 +27,22 @@ export default function WardIndicatorDeleteModal({
     <Modal
       isOpen={!!row}
       onClose={onClose}
-      title='Xác nhận xóa'
+      title={t('wardModal.confirmDelete')}
       maxWidth='sm'
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Hủy
+            {t('common.cancel')}
           </Button>
           <Button variant='danger' onClick={onConfirm} disabled={loading}>
-            Xóa
+            {t('common.delete')}
           </Button>
         </div>
       }
     >
       <p className={themeClasses.text}>
-        Xóa {indicatorCount} chỉ số của phường <strong>{row?.unit_name}</strong> năm{' '}
+        {t('wardModal.deleteCount', { count: indicatorCount })}{' '}
+        <strong>{row?.unit_name}</strong> {t('wardModal.deleteCountYear')}{' '}
         <strong>{row?.data_year}</strong>?
       </p>
     </Modal>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react';
 import { useSettings } from './SettingsContext';
 
 export type Theme = 'light' | 'dark';
@@ -15,7 +15,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { settings, updateSetting } = useSettings();
   const theme = (settings.theme || 'dark') as Theme;
 
-  useEffect(() => {
+  // useLayoutEffect: áp dụng theme trước khi browser vẽ, tránh nháy sáng/đen
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const body = document.body;
     root.classList.remove('dark', 'light');

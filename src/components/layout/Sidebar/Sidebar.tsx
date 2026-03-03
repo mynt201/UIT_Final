@@ -4,7 +4,8 @@ import { IoIosPodium } from 'react-icons/io';
 import { IoMdPerson, IoMdSettings } from 'react-icons/io';
 import type { User } from '../../../types/auth';
 import { useAuth } from '../../../contexts/AuthContext';
-import logo from '../../../assets/logo.jpg';
+import { useTranslation } from 'react-i18next';
+import FloodGuardLogo from '../../../assets/FloodGuardLogo';
 import { RISK_REPORT_PATH, SETTINGS_PATH, LOGIN_PATH, HOME_PATH } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../utils/themeUtils';
@@ -25,6 +26,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const themeClasses = getThemeClasses(theme);
 
   const navigate = useNavigate();
@@ -56,15 +58,15 @@ export default function Sidebar() {
       {/* Logo/Header */}
       <div className={`p-6 border-b ${themeClasses.border}`}>
           <div className='flex items-center gap-3 mb-2'>
-            <img src={logo} className='w-10 h-10 rounded-lg' alt='Logo' />
+            <FloodGuardLogo size={40} className='shrink-0 rounded-lg' />
             <div>
               <h1 className={`text-lg font-bold ${themeClasses.text}`}>
-              Flood Risk System
-            </h1>
-            <p className={`text-xs ${themeClasses.textSecondary}`}>
-              Đánh giá rủi ro ngập lụt
-            </p>
-          </div>
+                {t('sidebar.appName')}
+              </h1>
+              <p className={`text-xs ${themeClasses.textSecondary}`}>
+                {t('sidebar.appSubtitle')}
+              </p>
+            </div>
         </div>
         {user && (
           <div className={`mt-3 pt-3 border-t ${themeClasses.border} flex items-center gap-3`}>
@@ -84,7 +86,7 @@ export default function Sidebar() {
               )}
             </div>
             <div className="min-w-0">
-              <p className={`text-xs ${themeClasses.textSecondary}`}>Đăng nhập bởi</p>
+              <p className={`text-xs ${themeClasses.textSecondary}`}>{t('sidebar.loggedInAs')}</p>
               <p className={`text-sm font-medium ${themeClasses.text} truncate mt-0.5`}>
                 {user.displayName || user.full_name || user.username || user.email}
               </p>
@@ -100,7 +102,7 @@ export default function Sidebar() {
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass('/')}`}
         >
           <FaMapMarkedAlt size={20} />
-          <span>Bản đồ ngập lụt</span>
+          <span>{t('sidebar.map')}</span>
         </Link>
 
         {user && (
@@ -110,7 +112,7 @@ export default function Sidebar() {
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(RISK_REPORT_PATH)}`}
             >
               <IoIosPodium size={20} />
-              <span>Báo cáo rủi ro</span>
+              <span>{t('sidebar.riskReport')}</span>
             </Link>
           </>
         )}
@@ -122,14 +124,14 @@ export default function Sidebar() {
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass('/profile')}`}
             >
               <IoMdPerson size={20} />
-              <span>Thông tin cá nhân</span>
+              <span>{t('sidebar.profile')}</span>
             </Link>
             <Link
               to={SETTINGS_PATH}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(SETTINGS_PATH)}`}
             >
               <IoMdSettings size={20} />
-              <span>Cài đặt</span>
+              <span>{t('sidebar.settings')}</span>
             </Link>
           </div>
         )}
@@ -143,7 +145,7 @@ export default function Sidebar() {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${themeClasses.text} ${theme === 'light' ? 'hover:bg-red-50 hover:text-red-600' : 'hover:bg-red-900/30 hover:text-red-400'}`}
           >
             <FaSignOutAlt size={20} />
-            <span>Đăng xuất</span>
+            <span>{t('sidebar.logout')}</span>
           </button>
         ) : (
           <Link
@@ -151,7 +153,7 @@ export default function Sidebar() {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(LOGIN_PATH)}`}
           >
             <IoMdPerson size={20} />
-            <span>Đăng nhập</span>
+            <span>{t('sidebar.login')}</span>
           </Link>
         )}
       </div>

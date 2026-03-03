@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -27,11 +28,6 @@ import {
 import toast from "react-hot-toast";
 
 const currentYear = new Date().getFullYear();
-const yearOptions = Array.from({ length: 6 }, (_, i) => ({
-  value: currentYear - i,
-  label: `Năm ${currentYear - i}`,
-}));
-
 const WARD_PAGE_SIZE = 15;
 
 function getRiskLevelBadgeClass(riskLevel: string) {
@@ -42,51 +38,64 @@ function getRiskLevelBadgeClass(riskLevel: string) {
   return "bg-green-500/20 text-green-600";
 }
 
-const wardColumns: Array<{
-  header: string;
-  accessor: keyof WardReportItem | "stt";
-  render?: (value: unknown, row: WardReportItem & { stt?: number }) => React.ReactNode;
-}> = [
-  {
-    header: "STT",
-    accessor: "stt" as keyof WardReportItem,
-    render: (_: unknown, row) => (
-      <span className="text-gray-500">{row.stt ?? 0}</span>
-    ),
-  },
-  {
-    header: "Tên phường",
-    accessor: "ward_name",
-    render: (value: unknown) => (
-      <span className="font-medium">{String(value ?? "—")}</span>
-    ),
-  },
-  {
-    header: "Điểm R",
-    accessor: "total_score",
-    render: (value: unknown) => (
-      <span>{value != null ? Number(value).toFixed(2) : "—"}</span>
-    ),
-  },
-  {
-    header: "Trạng thái",
-    accessor: "risk_level",
-    render: (value: unknown) => (
-      <span
-        className={`px-2 py-1 rounded-full text-sm font-medium ${getRiskLevelBadgeClass(
-          String(value ?? "")
-        )}`}
-      >
-        {String(value ?? "—")}
-      </span>
-    ),
-  },
-];
-
 export default function RiskReportPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
+
+  const yearOptions = useMemo(
+    () =>
+      Array.from({ length: 6 }, (_, i) => ({
+        value: currentYear - i,
+        label: `${t("riskReport.yearLabel")} ${currentYear - i}`,
+      })),
+    [t]
+  );
+
+  const wardColumns = useMemo(
+    (): Array<{
+      header: string;
+      accessor: keyof WardReportItem | "stt";
+      render?: (value: unknown, row: WardReportItem & { stt?: number }) => React.ReactNode;
+    }> => [
+      {
+        header: t("riskReport.colStt"),
+        accessor: "stt" as keyof WardReportItem,
+        render: (_: unknown, row) => (
+          <span className="text-gray-500">{row.stt ?? 0}</span>
+        ),
+      },
+      {
+        header: t("riskReport.colWardName"),
+        accessor: "ward_name",
+        render: (value: unknown) => (
+          <span className="font-medium">{String(value ?? "—")}</span>
+        ),
+      },
+      {
+        header: t("riskReport.colScore"),
+        accessor: "total_score",
+        render: (value: unknown) => (
+          <span>{value != null ? Number(value).toFixed(2) : "—"}</span>
+        ),
+      },
+      {
+        header: t("riskReport.colStatus"),
+        accessor: "risk_level",
+        render: (value: unknown) => (
+          <span
+            className={`px-2 py-1 rounded-full text-sm font-medium ${getRiskLevelBadgeClass(
+              String(value ?? "")
+            )}`}
+          >
+            {String(value ?? "—")}
+          </span>
+        ),
+      },
+    ],
+    [t]
+  );
   const [year, setYear] = useState(currentYear);
   const [compareYear, setCompareYear] = useState(currentYear - 1);
   const [showCompare, setShowCompare] = useState(false);
@@ -111,18 +120,18 @@ export default function RiskReportPage() {
   const handleExportExcel = async () => {
     try {
       await reportService.downloadExcel(year);
-      toast.success("Đã tải xuống file Excel");
+      toast.success(t("riskReport.excelSuccess"));
     } catch {
-      toast.error("Không thể xuất Excel");
+      toast.error(t("riskReport.excelFailed"));
     }
   };
 
   const handleExportPDF = async () => {
     try {
       await reportService.downloadPDF(year);
-      toast.success("Đã tải xuống file PDF");
+      toast.success(t("riskReport.pdfSuccess"));
     } catch {
-      toast.error("Không thể xuất PDF");
+      toast.error(t("riskReport.pdfFailed"));
     }
   };
 
@@ -131,10 +140,10 @@ export default function RiskReportPage() {
       <div className={`p-6 ${themeClasses.text}`}>
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold text-amber-600 mb-2">
-            Không có quyền truy cập
+            {t("riskReport.noAccess")}
           </h2>
           <p className={themeClasses.textSecondary}>
-            Trang Báo cáo rủi ro chỉ dành cho Super Admin và Quản lý phường.
+            {t("riskReport.noAccessDesc")}
           </p>
         </div>
       </div>
@@ -147,7 +156,7 @@ export default function RiskReportPage() {
         className={`flex flex-col items-center justify-center min-h-[400px] gap-3 ${themeClasses.text}`}
       >
         <FaSpinner className="animate-spin text-4xl text-indigo-500" />
-        <p className="text-lg">Đang tải dữ liệu báo cáo...</p>
+        <p className="text-lg">{t("riskReport.loadingReport")}</p>
       </div>
     );
   }
@@ -157,10 +166,10 @@ export default function RiskReportPage() {
       <div className={`p-6 ${themeClasses.text}`}>
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold text-red-600 mb-2">
-            Không thể tải dữ liệu
+            {t("riskReport.loadError")}
           </h2>
           <p className={themeClasses.textSecondary}>
-            Vui lòng đảm bảo đã chạy refresh đánh giá rủi ro cho năm {year}.
+            {t("riskReport.loadErrorHint", { year })}
           </p>
         </div>
       </div>
@@ -187,9 +196,9 @@ export default function RiskReportPage() {
     }));
 
   const pieData = [
-    { name: "Thấp", value: lowRisk, color: "#9ca3af" },
-    { name: "Trung bình", value: mediumRisk, color: "#eab308" },
-    { name: "Cao", value: highRisk, color: "#ef4444" },
+    { name: t("pageView.riskLevelThap"), value: lowRisk, color: "#9ca3af" },
+    { name: t("pageView.riskLevelTrungBinh"), value: mediumRisk, color: "#eab308" },
+    { name: t("pageView.riskLevelCao"), value: highRisk, color: "#ef4444" },
   ].filter((d) => d.value > 0);
 
   const top5HighRisk = wards
@@ -210,12 +219,10 @@ export default function RiskReportPage() {
           <h1
             className={`text-2xl md:text-3xl font-bold mb-1 ${themeClasses.text}`}
           >
-            Báo cáo rủi ro ngập lụt
+            {t("riskReport.title")}
           </h1>
           <p className={themeClasses.textSecondary}>
-            {isWardView
-              ? "Thông tin và so sánh phường của bạn"
-              : "Tổng quan Thủ Đức – Thống kê và xuất báo cáo"}
+            {isWardView ? t("riskReport.subtitleWard") : t("riskReport.subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
@@ -231,7 +238,7 @@ export default function RiskReportPage() {
             className="flex items-center gap-2"
           >
             <FaFileExcel />
-            Xuất Excel
+            {t("riskReport.exportExcel")}
           </Button>
           <Button
             variant="secondary"
@@ -239,7 +246,7 @@ export default function RiskReportPage() {
             className="flex items-center gap-2"
           >
             <FaFilePdf />
-            Xuất PDF
+            {t("riskReport.exportPDF")}
           </Button>
         </div>
       </div>
@@ -255,24 +262,24 @@ export default function RiskReportPage() {
             className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-4`}
           >
             <div className={`text-sm ${themeClasses.textSecondary}`}>
-              Tổng số phường
+              {t("riskReport.totalWards")}
             </div>
             <div className={`text-2xl font-bold ${themeClasses.text}`}>
               {total}
             </div>
           </div>
           <StatCard
-            title="Phường nguy hiểm (Cao)"
+            title={t("riskReport.highRisk")}
             value={highRisk}
             variant="danger"
           />
           <StatCard
-            title="Phường trung bình"
+            title={t("riskReport.mediumRisk")}
             value={mediumRisk}
             variant="warning"
           />
           <StatCard
-            title="Phường an toàn (Thấp)"
+            title={t("riskReport.lowRisk")}
             value={lowRisk}
             variant="success"
           />
@@ -287,7 +294,7 @@ export default function RiskReportPage() {
         >
           <h2 className={`text-lg font-semibold mb-4 ${themeClasses.text}`}>
             <FaChartPie className="inline mr-2" />
-            {isWardView ? "Mức độ rủi ro phường" : "Tỷ lệ các mức rủi ro"}
+            {isWardView ? t("riskReport.chartTitleWard") : t("riskReport.chartTitle")}
           </h2>
           {isWardView && wards[0] ? (
             <div
@@ -332,9 +339,7 @@ export default function RiskReportPage() {
             <div
               className={`h-48 flex items-center justify-center ${themeClasses.textSecondary}`}
             >
-              {isWardView
-                ? "Chưa có dữ liệu đánh giá cho phường"
-                : "Chưa có dữ liệu phân bố"}
+              {isWardView ? t("riskReport.noDataChartWard") : t("riskReport.noDataChart")}
             </div>
           )}
         </div>
@@ -346,10 +351,10 @@ export default function RiskReportPage() {
           >
             <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>
               <FaMapMarkedAlt className="inline mr-2" />
-              Bản đồ phân vùng
+              {t("riskReport.mapSection")}
             </h2>
             <p className={`text-sm ${themeClasses.textSecondary} mb-4`}>
-              Bản đồ GIS hiển thị 3 màu (xanh, vàng, đỏ) theo mức rủi ro
+              {t("riskReport.mapDesc")}
             </p>
             <Link
               to={`${ADMIN_PAGE_VIEW_PATH}?year=${year}`}
@@ -360,7 +365,7 @@ export default function RiskReportPage() {
                 className="w-full flex items-center justify-center gap-2"
               >
                 <FaMapMarkedAlt />
-                Xem bản đồ
+                {t("riskReport.viewMap")}
               </Button>
             </Link>
           </div>
@@ -370,7 +375,7 @@ export default function RiskReportPage() {
             className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
           >
             <h2 className={`text-lg font-semibold mb-3 ${themeClasses.text}`}>
-              So sánh giữa các năm
+              {t("riskReport.compareTitle")}
             </h2>
             <div className="flex gap-2 mb-3">
               <Select
@@ -383,7 +388,7 @@ export default function RiskReportPage() {
                 variant="secondary"
                 onClick={() => setShowCompare(!showCompare)}
               >
-                {showCompare ? "Ẩn" : "So sánh"}
+                {showCompare ? t("riskReport.hide") : t("riskReport.compare")}
               </Button>
             </div>
             {showCompare && compareData && (
@@ -397,7 +402,7 @@ export default function RiskReportPage() {
                       <div
                         className={`p-2 rounded ${themeClasses.backgroundTertiary}`}
                       >
-                        <div className="text-xs opacity-70">Năm {year}</div>
+                        <div className="text-xs opacity-70">{t("riskReport.yearLabel")} {year}</div>
                         <div>
                           {compareData.wardCompare.year1 ? (
                             <>
@@ -412,7 +417,7 @@ export default function RiskReportPage() {
                         className={`p-2 rounded ${themeClasses.backgroundTertiary}`}
                       >
                         <div className="text-xs opacity-70">
-                          Năm {compareYear}
+                          {t("riskReport.yearLabel")} {compareYear}
                         </div>
                         <div>
                           {compareData.wardCompare.year2 ? (
@@ -462,12 +467,12 @@ export default function RiskReportPage() {
           className={`${themeClasses.backgroundTertiary} border ${themeClasses.border} rounded-xl p-6`}
         >
           <h2 className={`text-lg font-semibold mb-4 ${themeClasses.text}`}>
-            5 phường có nguy cơ cao nhất cần ưu tiên nguồn lực
+            {t("riskReport.top5Title")}
           </h2>
           <Table
             columns={wardColumns}
             data={top5HighRisk}
-            emptyMessage="Không có phường nguy cơ cao"
+            emptyMessage={t("riskReport.emptyHighRisk")}
           />
         </div>
       )}
@@ -478,15 +483,13 @@ export default function RiskReportPage() {
       >
         <div className="p-4 border-b border-inherit">
           <h2 className={`text-lg font-semibold ${themeClasses.text}`}>
-            {isWardView
-              ? "Thông tin phường"
-              : "Danh sách chi tiết: Tên phường | Điểm R | Trạng thái rủi ro"}
+            {isWardView ? t("riskReport.tableTitleWard") : t("riskReport.tableTitle")}
           </h2>
         </div>
         <Table
           columns={wardColumns}
           data={paginatedWards}
-          emptyMessage="Chưa có dữ liệu"
+          emptyMessage={t("riskReport.emptyTable")}
         />
         <Pagination
           page={wardPage}
@@ -494,7 +497,7 @@ export default function RiskReportPage() {
           totalItems={wards.length}
           pageSize={WARD_PAGE_SIZE}
           onPageChange={setWardPage}
-          itemLabel="phường"
+          itemLabel={t("riskReport.wardLabel")}
         />
       </div>
     </div>

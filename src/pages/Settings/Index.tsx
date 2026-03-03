@@ -1,34 +1,18 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { getThemeClasses } from "../../utils/themeUtils";
+import i18n from "../../i18n";
 import { Select, Button } from "../../components";
 import { settingsService } from "../../services/settingsService";
 import type { Settings } from "../../types";
 import toast from "react-hot-toast";
 
-const DEFAULT_SETTINGS: Settings = {
-  theme: "dark",
-  language: "vi",
-  notifications: true,
-  emailNotifications: true,
-  pushNotifications: true,
-  smsNotifications: false,
-  autoRefresh: false,
-  refreshInterval: 30000,
-  mapStyle: "default",
-  defaultView: "map",
-  autoSave: false,
-  mapDefaultZoom: 13,
-  mapAnimation: true,
-  fontSize: "medium",
-  dateFormat: "dd/mm/yyyy",
-  showTooltips: true,
-};
-
 export default function SettingsPage() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const themeClasses = getThemeClasses(theme);
   const { settings, updateSetting, updateSettings, resetSettings: resetContext } = useSettings();
 
@@ -38,16 +22,18 @@ export default function SettingsPage() {
     staleTime: 30_000,
   });
 
+  // Đồng bộ từ API (language lưu DB) — không ghi đè theme
   useEffect(() => {
     if (apiSettings) {
       updateSettings({
-        theme: apiSettings.theme,
         language: apiSettings.language,
         fontSize: apiSettings.fontSize,
         defaultView: apiSettings.defaultView,
         refreshInterval: apiSettings.refreshInterval,
         notifications: apiSettings.notifications,
       });
+      const lang = apiSettings.language === "en" ? "en" : "vi";
+      if (i18n.language !== lang) i18n.changeLanguage(lang);
     }
   }, [apiSettings, updateSettings]);
 
@@ -57,14 +43,18 @@ export default function SettingsPage() {
   ) => {
     updateSetting(key, value);
 
+    if (key === "language") {
+      i18n.changeLanguage(value as string);
+    }
+
     const syncKeys: (keyof Settings)[] = ["theme", "language", "fontSize", "notifications", "defaultView", "refreshInterval"];
     if (syncKeys.includes(key)) {
       settingsService.updateSettings({ [key]: value }).then((ok) => {
-        if (ok) toast.success("Đã lưu cài đặt");
-        else toast.error("Không thể đồng bộ cài đặt");
+        if (ok) toast.success(t("settings.saved"));
+        else toast.error(t("settings.saveFailed"));
       });
     } else {
-      toast.success("Đã áp dụng cài đặt!");
+      toast.success(t("settings.applied"));
     }
   };
 
@@ -72,14 +62,14 @@ export default function SettingsPage() {
     resetContext();
 
     const ok = await settingsService.resetSettings();
-    if (ok) toast.success("Đã khôi phục cài đặt mặc định!");
-    else toast.error("Không thể khôi phục trên máy chủ");
+    if (ok) toast.success(t("settings.resetSuccess"));
+    else toast.error(t("settings.resetFailed"));
   };
 
   return (
     <div className={`w-full h-full p-4 md:p-6 overflow-y-auto overflow-x-hidden ${themeClasses.background}`}>
       <div className={`text-2xl md:text-3xl font-bold mb-6 ${themeClasses.text}`}>
-        Cài đặt
+        {t("settings.title")}
       </div>
 
       <div className="space-y-6">
@@ -98,14 +88,14 @@ export default function SettingsPage() {
                 : "text-white border-gray-700"
             }`}
           >
-            Giao diện
+            {t("settings.interface")}
           </h3>
           <div className="space-y-4">
             <Select
-              label="Chủ đề"
+              label={t("settings.theme")}
               options={[
-                { value: "dark", label: "Tối" },
-                { value: "light", label: "Sáng" },
+                { value: "dark", label: t("settings.themeDark") },
+                { value: "light", label: t("settings.themeLight") },
               ]}
               value={settings.theme}
               onChange={(e) =>
@@ -114,11 +104,11 @@ export default function SettingsPage() {
             />
 
             <Select
-              label="Cỡ chữ"
+              label={t("settings.fontSize")}
               options={[
-                { value: "small", label: "Nhỏ" },
-                { value: "medium", label: "Vừa" },
-                { value: "large", label: "Lớn" },
+                { value: "small", label: t("settings.fontSizeSmall") },
+                { value: "medium", label: t("settings.fontSizeMedium") },
+                { value: "large", label: t("settings.fontSizeLarge") },
               ]}
               value={settings.fontSize}
               onChange={(e) =>
@@ -138,14 +128,14 @@ export default function SettingsPage() {
           <h3
             className={`${themeClasses.text} text-xl font-semibold mb-4 border-b ${themeClasses.border} pb-2`}
           >
-            Ngôn ngữ & Định dạng
+            {t("settings.languageAndFormat")}
           </h3>
           <div className="space-y-4">
             <Select
-              label="Ngôn ngữ"
+              label={t("settings.language")}
               options={[
-                { value: "vi", label: "Tiếng Việt" },
-                { value: "en", label: "English" },
+                { value: "vi", label: t("settings.languageVi") },
+                { value: "en", label: t("settings.languageEn") },
               ]}
               value={settings.language}
               onChange={(e) =>
@@ -154,7 +144,7 @@ export default function SettingsPage() {
             />
 
             <Select
-              label="Định dạng ngày"
+              label={t("settings.dateFormat")}
               options={[
                 { value: "dd/mm/yyyy", label: "dd/mm/yyyy" },
                 { value: "mm/dd/yyyy", label: "mm/dd/yyyy" },

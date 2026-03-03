@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import * as yup from "yup";
 import { FaPlus, FaEdit, FaTrash, FaChartLine, FaSync } from "react-icons/fa";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -16,26 +17,14 @@ import { UserRole } from "../../constants/roles";
 import IndicatorFormModal, {
   type IndicatorFormData,
 } from "./Partials/IndicatorFormModal";
-import {
-  calculateAHP,
-  createEmptyAHPMatrix,
-  setMatrixCell,
-  type AHPResult,
-} from "../../utils/ahpUtils";
-
-/** Thứ tự cố định cho bảng AHP: C1 Địa hình, C2 Triều cường, C3 Lượng mưa, C4 Dân số, C5 Mật độ cống */
-const AHP_ORDER = ["H", "T", "P", "POP", "D"];
-
+import type { AHPResult } from "../../utils/ahpUtils";
+import { createEmptyAHPMatrix } from "../../utils/ahpUtils";
 import { getIndicatorLabel } from "../../utils/indicatorLabels";
-
-/** Ma trận mặc định theo thứ tự H,T,P,POP,D (từ tài liệu) */
-const DEFAULT_AHP_MATRIX_5: number[][] = [
-  [1, 2, 3, 5, 4],
-  [1 / 2, 1, 2, 4, 3],
-  [1 / 3, 1 / 2, 1, 3, 2],
-  [1 / 5, 1 / 4, 1 / 3, 1, 1 / 2],
-  [1 / 4, 1 / 3, 1 / 2, 2, 1],
-];
+import AhpMatrixModal from "../DataManagement/WardManagement/Partials/AhpMatrixModal";
+import {
+  LEGACY_AHP_ORDER,
+  DEFAULT_AHP_MATRIX_5,
+} from "../DataManagement/WardManagement/constants";
 
 const defaultForm: IndicatorFormData = {
   code: "",
@@ -70,6 +59,7 @@ const indicatorSchema = yup.object().shape({
 });
 
 export default function IndicatorManagementPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { theme } = useTheme();
@@ -99,29 +89,29 @@ export default function IndicatorManagementPage() {
   const indicatorsInAHOrder = useMemo(() => {
     const codeToInd = Object.fromEntries(indicators.map((i) => [i.code, i]));
     const ordered: FloodIndicator[] = [];
-    for (const code of AHP_ORDER) {
+    for (const code of LEGACY_AHP_ORDER) {
       if (codeToInd[code]) ordered.push(codeToInd[code]);
     }
     for (const ind of indicators) {
-      if (!AHP_ORDER.includes(ind.code)) ordered.push(ind);
+      if (!LEGACY_AHP_ORDER.includes(ind.code)) ordered.push(ind);
     }
     return ordered;
   }, [indicators]);
 
-  const indicatorColumns = [
+  const indicatorColumns = useMemo(() => [
     {
-      header: "Ký hiệu",
+      header: t("indicatorManagement.colCode"),
       accessor: "code" as const,
       render: (v: unknown) => <span className="font-medium">{String(v)}</span>,
     },
     {
-      header: "Tên chỉ số",
+      header: t("indicatorManagement.colName"),
       accessor: "name" as const,
       render: (_: unknown, row: FloodIndicator) => getIndicatorLabel(row),
     },
-    { header: "Nhóm", accessor: "group_type" as const },
+    { header: t("indicatorManagement.colGroup"), accessor: "group_type" as const },
     {
-      header: "Trọng số",
+      header: t("indicatorManagement.colWeight"),
       accessor: "weight" as const,
       render: (v: unknown) => (
         <span className="block text-center">
@@ -130,14 +120,14 @@ export default function IndicatorManagementPage() {
       ),
     },
     {
-      header: "Đơn vị",
+      header: t("indicatorManagement.colUnit"),
       accessor: "unit" as const,
       render: (v: unknown) => (
         <span className="block text-center">{String(v ?? "-")}</span>
       ),
     },
     {
-      header: "Hướng",
+      header: t("indicatorManagement.colDirection"),
       accessor: "direction" as const,
       render: (_: unknown, row: FloodIndicator) => (
         <span
@@ -147,14 +137,14 @@ export default function IndicatorManagementPage() {
               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
           }`}
         >
-          {row.direction === 0 ? "Nghịch" : "Thuận"}
+          {row.direction === 0 ? t("indicatorManagement.directionInverse") : t("indicatorManagement.directionDirect")}
         </span>
       ),
     },
     ...(isSuperAdmin
       ? [
           {
-            header: "Thao tác",
+            header: t("indicatorManagement.colActions"),
             accessor: "_id" as const,
             render: (_: unknown, row: FloodIndicator) => (
               <div className="flex gap-1 justify-end">
@@ -164,7 +154,7 @@ export default function IndicatorManagementPage() {
                     handleOpenEdit(row);
                   }}
                   className="p-1.5 rounded text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
-                  title="Chỉnh sửa"
+                  title={t("common.edit")}
                 >
                   <FaEdit size={14} />
                 </button>
@@ -174,7 +164,7 @@ export default function IndicatorManagementPage() {
                     setIndicatorToDelete(row);
                   }}
                   className="p-1.5 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
-                  title="Xóa"
+                  title={t("common.delete")}
                 >
                   <FaTrash size={14} />
                 </button>
@@ -183,20 +173,20 @@ export default function IndicatorManagementPage() {
           },
         ]
       : []),
-  ];
+  ], [t, isSuperAdmin]);
 
   const createMut = useMutation({
     mutationFn: (p: FloodIndicatorCreatePayload) =>
       floodIndicatorService.createIndicator(p),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
-      toast.success("Đã thêm chỉ số!");
+      toast.success(t("indicatorManagement.toastAddSuccess"));
       handleCloseModal();
     },
     onError: (e: unknown) => {
       toast.error(
         (e as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || "Lỗi khi thêm",
+          ?.error || t("indicatorManagement.toastAddError"),
       );
     },
   });
@@ -211,13 +201,13 @@ export default function IndicatorManagementPage() {
     }) => floodIndicatorService.updateIndicator(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
-      toast.success("Đã cập nhật chỉ số!");
+      toast.success(t("indicatorManagement.toastUpdateSuccess"));
       handleCloseModal();
     },
     onError: (e: unknown) => {
       toast.error(
         (e as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || "Lỗi khi cập nhật",
+          ?.error || t("indicatorManagement.toastUpdateError"),
       );
     },
   });
@@ -226,13 +216,13 @@ export default function IndicatorManagementPage() {
     mutationFn: (id: string) => floodIndicatorService.deleteIndicator(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
-      toast.success("Đã xóa chỉ số.");
+      toast.success(t("indicatorManagement.toastDeleteSuccess"));
       setIndicatorToDelete(null);
     },
     onError: (e: unknown) => {
       toast.error(
         (e as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || "Lỗi khi xóa",
+          ?.error || t("indicatorManagement.toastDeleteError"),
       );
     },
   });
@@ -242,7 +232,7 @@ export default function IndicatorManagementPage() {
       floodIndicatorService.updateWeights(items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
-      toast.success("Đã lưu trọng số AHP!");
+      toast.success(t("ahp.toastWeightsSuccess"));
       setAhpModalOpen(false);
     },
     onError: (e: unknown) => {
@@ -327,7 +317,7 @@ export default function IndicatorManagementPage() {
             className={`font-semibold text-xl flex items-center gap-2 ${themeClasses.text}`}
           >
             <FaChartLine size={22} className="text-amber-500" />
-            Quản lý danh mục chỉ số
+            {t("indicatorManagement.title")}
           </h1>
           <div className="flex items-center gap-2">
             <button
@@ -346,7 +336,7 @@ export default function IndicatorManagementPage() {
                     const codes = indicatorsInAHOrder.map((i) => i.code);
                     if (
                       n === 5 &&
-                      JSON.stringify(codes) === JSON.stringify(AHP_ORDER)
+                      JSON.stringify(codes) === JSON.stringify(LEGACY_AHP_ORDER)
                     ) {
                       setAhpMatrix(DEFAULT_AHP_MATRIX_5.map((r) => [...r]));
                     } else {
@@ -357,17 +347,17 @@ export default function IndicatorManagementPage() {
                   }}
                   disabled={indicatorsInAHOrder.length < 2}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium"
-                  title="Tính trọng số từ ma trận so sánh cặp (AHP)"
+                  title={t("ahp.tooltip")}
                 >
                   <FaChartLine size={14} />
-                  Tính trọng số AHP
+                  {t("ahp.buttonLabel")}
                 </button>
                 <button
                   onClick={handleOpenAdd}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium"
                 >
                   <FaPlus size={14} />
-                  Thêm
+                  {t("common.add")}
                 </button>
               </>
             )}
@@ -376,8 +366,7 @@ export default function IndicatorManagementPage() {
 
         <div className="p-5">
           <p className={`text-sm ${themeClasses.textSecondary} mb-4`}>
-            Hướng: 1 = Thuận, 0 = Nghịch. Trọng số được tính bằng AHP (ma trận
-            so sánh cặp), không nhập tay.
+            {t("ahp.directionHint")}
           </p>
 
           <Table<FloodIndicator>
@@ -385,8 +374,8 @@ export default function IndicatorManagementPage() {
             data={indicators}
             emptyMessage={
               isSuperAdmin
-                ? "Chưa có chỉ số. Nhấn Thêm để thêm mới."
-                : "Chưa có chỉ số."
+                ? t("indicatorManagement.noIndicatorsAdd")
+                : t("indicatorManagement.noIndicatorsShort")
             }
           />
         </div>
@@ -403,166 +392,17 @@ export default function IndicatorManagementPage() {
         loading={loading}
       />
 
-      {/* AHP Modal - Tính trọng số từ ma trận so sánh cặp */}
-      <Modal
+      <AhpMatrixModal
         isOpen={ahpModalOpen}
+        indicatorsInAHOrder={indicatorsInAHOrder}
+        matrix={ahpMatrix}
+        result={ahpResult}
+        saving={updateWeightsMut.isPending}
         onClose={() => setAhpModalOpen(false)}
-        title="Phân tích thứ bậc (AHP) - Tính trọng số"
-        maxWidth="5xl"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setAhpModalOpen(false)}>
-              Đóng
-            </Button>
-            {ahpResult && (
-              <Button
-                variant="primary"
-                onClick={() =>
-                  updateWeightsMut.mutate(
-                    indicatorsInAHOrder.map((ind, i) => ({
-                      code: ind.code,
-                      weight: ahpResult.weights[i] ?? 0,
-                    })),
-                  )
-                }
-                disabled={updateWeightsMut.isPending || !ahpResult.isValid}
-              >
-                Lưu trọng số
-              </Button>
-            )}
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <p className={`text-sm ${themeClasses.textSecondary}`}>
-            1 = bằng nhau, 2–4–6 = trị trung gian, 3 = quan trọng hơn, 5 = rất
-            quan trọng, 7–9 = cực kỳ. Chỉ nhập tam giác trên (ô [i] so với [j],
-            i &lt; j).
-            {indicatorsInAHOrder.length === 5 &&
-              JSON.stringify(indicatorsInAHOrder.map((i) => i.code)) ===
-                JSON.stringify(AHP_ORDER) && (
-                <span>
-                  {" "}
-                  Nhấn &quot;Dùng mặc định&quot; để load ma trận mẫu (Địa hình,
-                  Triều cường, Lượng mưa, Dân số, Mật độ cống).
-                </span>
-              )}
-          </p>
-          {indicatorsInAHOrder.length < 2 ? (
-            <p className={themeClasses.textSecondary}>
-              Cần ít nhất 2 chỉ số để tính AHP.
-            </p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="p-2 border"></th>
-                      {indicatorsInAHOrder.map((ind) => (
-                        <th
-                          key={ind._id}
-                          className={`p-2 border text-center font-medium ${themeClasses.border}`}
-                          title={getIndicatorLabel(ind)}
-                        >
-                          {getIndicatorLabel(ind)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {indicatorsInAHOrder.map((ind, i) => (
-                      <tr key={ind._id}>
-                        <td
-                          className={`p-2 border font-medium ${themeClasses.border}`}
-                        >
-                          {getIndicatorLabel(ind)}
-                        </td>
-                        {indicatorsInAHOrder.map((_, j) => (
-                          <td
-                            key={j}
-                            className={`p-1 border text-center ${themeClasses.border}`}
-                          >
-                            {i === j ? (
-                              <span className="text-gray-400">1</span>
-                            ) : i < j ? (
-                              <input
-                                type="number"
-                                min="0.11"
-                                max="9"
-                                step="0.5"
-                                value={ahpMatrix[i]?.[j] ?? 1}
-                                onChange={(e) => {
-                                  const v = parseFloat(e.target.value);
-                                  if (!isNaN(v))
-                                    setAhpMatrix(
-                                      setMatrixCell(ahpMatrix, i, j, v),
-                                    );
-                                }}
-                                className={`w-14 px-1 py-0.5 text-center rounded border text-sm ${
-                                  theme === "light"
-                                    ? "bg-white border-gray-300"
-                                    : "bg-gray-800 border-gray-600"
-                                }`}
-                              />
-                            ) : (
-                              <span className="text-gray-500 text-xs">
-                                {ahpMatrix[i]?.[j]?.toFixed(2) ?? "-"}
-                              </span>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex flex-wrap items-center gap-4">
-                {indicatorsInAHOrder.length === 5 &&
-                  JSON.stringify(indicatorsInAHOrder.map((i) => i.code)) ===
-                    JSON.stringify(AHP_ORDER) && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setAhpMatrix(DEFAULT_AHP_MATRIX_5.map((r) => [...r]))
-                      }
-                    >
-                      Dùng mặc định
-                    </Button>
-                  )}
-                <Button
-                  variant="primary"
-                  onClick={() => setAhpResult(calculateAHP(ahpMatrix))}
-                >
-                  Tính trọng số
-                </Button>
-                {ahpResult && (
-                  <div className={`text-sm ${themeClasses.text}`}>
-                    <span
-                      className={
-                        ahpResult.isValid
-                          ? "text-emerald-600"
-                          : "text-amber-600"
-                      }
-                    >
-                      CR = {ahpResult.consistencyRatio}{" "}
-                      {ahpResult.isValid ? "✓ Hợp lệ" : "⚠ Cần đánh giá lại"}
-                    </span>
-                    {" · "}
-                    Trọng số:{" "}
-                    {indicatorsInAHOrder
-                      .map(
-                        (ind, i) =>
-                          `${getIndicatorLabel(ind)}=${(ahpResult.weights[i] ?? 0).toFixed(3)}`,
-                      )
-                      .join("; ")}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+        onMatrixChange={setAhpMatrix}
+        onResultChange={setAhpResult}
+        onSave={(items) => updateWeightsMut.mutate(items)}
+      />
 
       <Modal
         isOpen={!!indicatorToDelete}

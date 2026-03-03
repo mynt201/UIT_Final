@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import FloodMapView from "./Partials/FloodMapView";
 import FilterSection from "./Partials/FilterSection";
 import { useMapWards } from "../../hooks/useMapWards";
@@ -7,6 +8,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 
 const PageView = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
   const yearFromUrl = searchParams.get("year");
@@ -51,7 +53,7 @@ const PageView = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
           <p className={`text-sm ${themeClasses.textSecondary}`}>
-            Đang tải dữ liệu khu vực...
+            {t("pageView.loading")}
           </p>
         </div>
       </div>
@@ -64,10 +66,10 @@ const PageView = () => {
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
           <p className={`text-sm ${themeClasses.textSecondary} mb-2`}>
-            Không thể tải dữ liệu khu vực
+            {t("pageView.loadError")}
           </p>
           <p className={`text-xs ${themeClasses.textSecondary}`}>
-            Vui lòng thử lại sau
+            {t("pageView.tryAgain")}
           </p>
         </div>
       </div>
@@ -79,7 +81,7 @@ const PageView = () => {
       <div
         className={`${themeClasses.text} text-sm md:text-base p-2 md:p-3 shrink-0`}
       >
-        Bản đồ ngập lụt TP.HCM — filter theo năm
+        {t("pageView.title")}
       </div>
 
       {/* Filter Section */}

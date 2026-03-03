@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>FloodGuard</title>
+  <defs>
+    <linearGradient id="fg-shield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M16 1.6L4.8 6.4v8c0 6.4 4.8 11.2 11.2 14.4 6.4-3.2 11.2-8 11.2-14.4V6.4L16 1.6z" fill="url(#fg-shield)" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
+  <!-- Wave -->
+  <path d="M8.8 16h3.2c1.2 0 2.4-.8 4-.8s2.8.8 4 .8h3.2v1.6h-3.2c-1.2 0-2.4.8-4 .8s-2.8-.8-4-.8H8.8V16z" fill="white" fill-opacity="0.95"/>
+</svg>

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { useFormik } from "formik";
 import * as yup from "yup";
@@ -113,6 +114,7 @@ const updateUserSchema = yup.object().shape({
 });
 
 const UserManagementPage = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
 
@@ -217,7 +219,7 @@ const UserManagementPage = () => {
       ward_id?: string | null;
     }) => authService.createAdminUser(userData),
     onSuccess: () => {
-      toast.success("Thêm người dùng thành công!");
+      toast.success(t("userManagement.toastAddSuccess"));
       queryClient.invalidateQueries({ queryKey: ["users"] });
       handleCloseModal();
       userFormik.resetForm();
@@ -287,7 +289,7 @@ const UserManagementPage = () => {
 
       // Show toast error
       const errorMessage =
-        apiError || error?.message || "Có lỗi xảy ra khi thêm người dùng";
+        apiError || error?.message || t("userManagement.toastAddError");
       toast.error(errorMessage);
     },
   });
@@ -296,7 +298,7 @@ const UserManagementPage = () => {
     mutationFn: ({ id, userData }: { id: string; userData: Partial<User> }) =>
       authService.updateUser(id, userData),
     onSuccess: () => {
-      toast.success("Cập nhật người dùng thành công!");
+      toast.success(t("userManagement.toastUpdateSuccess"));
       queryClient.invalidateQueries({ queryKey: ["users"] });
       handleCloseModal();
       userFormik.resetForm();
@@ -305,7 +307,7 @@ const UserManagementPage = () => {
       const errorMessage =
         error?.data?.error ||
         error?.message ||
-        "Có lỗi xảy ra khi cập nhật người dùng";
+        t("userManagement.toastUpdateError");
       toast.error(errorMessage);
     },
   });
@@ -313,12 +315,12 @@ const UserManagementPage = () => {
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => authService.deleteUser(userId),
     onSuccess: () => {
-      toast.success("Xóa người dùng thành công!");
+      toast.success(t("userManagement.toastDeleteSuccess"));
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error: any) => {
       const errorMessage =
-        error?.data?.error || error?.message || "Không thể xóa người dùng";
+        error?.data?.error || error?.message || t("userManagement.toastDeleteError");
       toast.error(errorMessage);
     },
   }); // Separate loading for API calls
@@ -499,7 +501,7 @@ const UserManagementPage = () => {
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "Chưa có";
+    if (!dateString) return t("userManagement.noDate");
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
@@ -513,10 +515,10 @@ const UserManagementPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className={`text-3xl font-bold mb-2 ${themeClasses.text}`}>
-          Quản lý Người dùng
+          {t("userManagement.title")}
         </h1>
         <p className={themeClasses.textSecondary}>
-          Quản lý tài khoản người dùng trong hệ thống
+          {t("userManagement.subtitle")}
         </p>
       </div>
 
@@ -556,7 +558,7 @@ const UserManagementPage = () => {
               className="flex items-center gap-2"
             >
               <FaPlus />
-              <span>Thêm người dùng</span>
+              <span>{t("userManagement.addUser")}</span>
             </Button>
           </div>
         </div>
@@ -568,14 +570,14 @@ const UserManagementPage = () => {
           <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <span className="text-sm text-gray-600">Đang tải...</span>
+              <span className="text-sm text-gray-600">{t("userManagement.loading")}</span>
             </div>
           </div>
         )}
         <Table
           columns={[
             {
-              header: "Tên người dùng",
+              header: t("userManagement.colUsername"),
               accessor: "username",
               render: (value) => (
                 <button
@@ -592,12 +594,12 @@ const UserManagementPage = () => {
               ),
             },
             {
-              header: "Email",
+              header: t("userManagement.colEmail"),
               accessor: "email",
               render: (value) => String(value),
             },
             {
-              header: "Họ tên",
+              header: t("userManagement.colFullName"),
               accessor: "full_name",
               render: (value, row) => (
                 <button
@@ -614,7 +616,7 @@ const UserManagementPage = () => {
               ),
             },
             {
-              header: "Vai trò",
+              header: t("userManagement.colRole"),
               accessor: "role",
               render: (value) => (
                 <button
@@ -647,7 +649,7 @@ const UserManagementPage = () => {
             ...(currentUser?.role === UserRole.SUPER_ADMIN
               ? [
                   {
-                    header: "Phường",
+                    header: t("userManagement.colWard"),
                     accessor: "ward_id",
                     render: (value: string, row: any) => {
                       const wardId = value || row.ward_id;
@@ -681,7 +683,7 @@ const UserManagementPage = () => {
               ),
             },
             {
-              header: "Đăng nhập cuối",
+              header: t("userManagement.colLastLogin"),
               accessor: "lastLogin",
               render: (value) => (
                 <button
@@ -700,7 +702,7 @@ const UserManagementPage = () => {
               ),
             },
             {
-              header: "Thao tác",
+              header: t("userManagement.colActions"),
               accessor: "id",
               render: (_, row) => (
                 <div className="flex gap-2">
@@ -711,14 +713,14 @@ const UserManagementPage = () => {
                         ? "text-indigo-600 hover:bg-indigo-500/20"
                         : "text-indigo-400 hover:bg-indigo-500/20"
                     }`}
-                    title="Chỉnh sửa"
+                    title={t("common.edit")}
                   >
                     <FaEdit />
                   </button>
                   <button
                     onClick={() => handleDeleteClick(row as User)}
                     className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                    title="Xóa"
+                    title={t("common.delete")}
                   >
                     <FaTrash />
                   </button>
@@ -727,7 +729,7 @@ const UserManagementPage = () => {
             },
           ]}
           data={filteredUsers}
-          emptyMessage="Không tìm thấy người dùng nào"
+          emptyMessage={t("userManagement.emptyMessage")}
         />
       </div>
 
@@ -735,13 +737,14 @@ const UserManagementPage = () => {
       {displayPagination.total > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
           <div className="text-sm text-gray-600">
-            Hiển thị{" "}
-            {(displayPagination.page - 1) * displayPagination.limit + 1} -{" "}
-            {Math.min(
-              displayPagination.page * displayPagination.limit,
-              displayPagination.total,
-            )}{" "}
-            của {displayPagination.total} người dùng
+            {t("userManagement.paginationShow", {
+              from: (displayPagination.page - 1) * displayPagination.limit + 1,
+              to: Math.min(
+                displayPagination.page * displayPagination.limit,
+                displayPagination.total,
+              ),
+              total: displayPagination.total,
+            })}
           </div>
 
           <div className="flex items-center gap-2">
@@ -752,10 +755,10 @@ const UserManagementPage = () => {
               disabled={loadingUsers}
               className="px-2 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value={10}>10/trang</option>
-              <option value={25}>25/trang</option>
-              <option value={50}>50/trang</option>
-              <option value={100}>100/trang</option>
+              <option value={10}>{t("userManagement.perPage", { n: 10 })}</option>
+              <option value={25}>{t("userManagement.perPage", { n: 25 })}</option>
+              <option value={50}>{t("userManagement.perPage", { n: 50 })}</option>
+              <option value={100}>{t("userManagement.perPage", { n: 100 })}</option>
             </select>
 
             {/* Page navigation */}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FaSearch, FaFilter } from 'react-icons/fa';
 import { Input, Select } from '../../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -34,6 +35,7 @@ export default function SearchAndFilter({
   showWardFilter = false,
   wardOptions = [],
 }: SearchAndFilterProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
@@ -53,7 +55,7 @@ export default function SearchAndFilter({
           )}
           <Input
             type='text'
-            placeholder='Tìm kiếm tên, email, họ tên...'
+            placeholder={t('userManagement.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             disabled={disabled}
@@ -64,7 +66,7 @@ export default function SearchAndFilter({
           <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
           <Select
             options={[
-              { value: 'all', label: 'Tất cả vai trò' },
+              { value: 'all', label: t('userManagement.allRoles') },
               ...ROLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
             ]}
             value={roleFilter}
@@ -77,7 +79,7 @@ export default function SearchAndFilter({
           <div className='relative'>
             <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
             <Select
-              options={[{ value: 'all', label: 'Tất cả phường' }, ...wardOptions]}
+              options={[{ value: 'all', label: t('userManagement.allWards') }, ...wardOptions]}
               value={wardFilter}
               onChange={(e) => onWardFilterChange(e.target.value)}
               disabled={disabled}
@@ -89,9 +91,9 @@ export default function SearchAndFilter({
           <FaFilter className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${themeClasses.textSecondary} z-10`} />
           <Select
             options={[
-              { value: 'all', label: 'Tất cả trạng thái' },
-              { value: 'active', label: 'Đang hoạt động' },
-              { value: 'inactive', label: 'Không hoạt động' },
+              { value: 'all', label: t('userManagement.allStatus') },
+              { value: 'active', label: t('userManagement.statusActive') },
+              { value: 'inactive', label: t('userManagement.statusInactive') },
             ]}
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'active' | 'inactive')}

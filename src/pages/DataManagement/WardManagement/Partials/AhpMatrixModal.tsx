@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useTheme } from '../../../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { getThemeClasses } from '../../../../utils/themeUtils';
 import { Modal, Button, Table, Input } from '../../../../components';
 import { getIndicatorLabel } from '../../../../utils/indicatorLabels';
@@ -11,7 +12,10 @@ import type { FloodIndicator } from '../../../../services/indicatorValueService'
 
 const ahpCellSchema = yup.number().min(0.11, 'Từ 0.11 đến 9').max(9, 'Từ 0.11 đến 9');
 
-function validateAhpMatrix(values: { matrix: number[][] }): Record<string, unknown> {
+function validateAhpMatrix(
+  values: { matrix: number[][] },
+  cellErrorMsg: string
+): Record<string, unknown> {
   const errors: Record<string, unknown> = {};
   const m = values.matrix;
   if (!m || !Array.isArray(m)) return errors;
@@ -24,7 +28,7 @@ function validateAhpMatrix(values: { matrix: number[][] }): Record<string, unkno
         try {
           ahpCellSchema.validateSync(m[i][j]);
         } catch {
-          matrixErrors[i][j] = 'Từ 0.11 đến 9';
+          matrixErrors[i][j] = cellErrorMsg;
           hasError = true;
         }
       }
@@ -64,6 +68,7 @@ export default function AhpMatrixModal({
   onSave,
 }: AhpMatrixModalProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const themeClasses = getThemeClasses(theme);
   const [editingCell, setEditingCell] = useState<{ i: number; j: number; value: string } | null>(
     null
@@ -72,7 +77,7 @@ export default function AhpMatrixModal({
   const formik = useFormik({
     initialValues: { matrix },
     enableReinitialize: true,
-    validate: validateAhpMatrix,
+    validate: (values) => validateAhpMatrix(values, t('ahp.cellError')),
     validateOnChange: false,
     validateOnBlur: true,
     onSubmit: () => {},
@@ -161,31 +166,25 @@ export default function AhpMatrixModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title='Phân tích thứ bậc (AHP)'
+      title={t('ahp.title')}
       maxWidth='7xl'
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Đóng
+            {t('ahp.close')}
           </Button>
           {result && (
             <Button variant='primary' onClick={handleSave} disabled={saving || !result.isValid}>
-              Lưu trọng số
+              {t('ahp.saveWeights')}
             </Button>
           )}
         </div>
       }
     >
       <div className='space-y-4'>
-        <p className={`text-sm ${themeClasses.textSecondary}`}>
-          1 = bằng nhau, 2–4–6–8 = giá trị trung gian, 3 = quan trọng hơn, 5 = rất quan trọng, 7–9 =
-          cực kỳ. Chỉ nhập tam giác trên (ô [i] so với [j], i &lt; j). Khi đổi giá trị, ô đối xứng
-          tự động cập nhật = 1/giá trị.
-        </p>
+        <p className={`text-sm ${themeClasses.textSecondary}`}>{t('ahp.hint')}</p>
         {indicatorsInAHOrder.length === 0 ? (
-          <p className={themeClasses.textSecondary}>
-            Chưa có chỉ số. Thêm chỉ số trong flood_indicators trước.
-          </p>
+          <p className={themeClasses.textSecondary}>{t('ahp.noIndicators')}</p>
         ) : (
           <>
             <form onSubmit={(e) => e.preventDefault()}>
@@ -255,32 +254,42 @@ export default function AhpMatrixModal({
                 />
               </div>
             </form>
-            <div className='flex flex-wrap items-center gap-4'>
-              {first5MatchLegacy && (
-                <Button variant='secondary' onClick={handleUseDefault}>
-                  Dùng mặc định (5 chỉ số H,T,P,POP,D)
-                </Button>
-              )}
-              <Button variant='primary' disabled={result?.isValid} onClick={handleCalculate}>
-                Tính trọng số
-              </Button>
-              {formik.errors.matrix && typeof formik.errors.matrix === 'string' && (
-                <span className='text-sm text-red-500'>{formik.errors.matrix}</span>
-              )}
-              {result && (
-                <div className={`text-sm ${themeClasses.text}`}>
-                  <span className={result.isValid ? 'text-emerald-600' : 'text-amber-600'}>
-                    CR = {result.consistencyRatio}{' '}
-                    {result.isValid ? '✓ Hợp lệ' : '⚠ Cần đánh giá lại'}
-                  </span>
-                  {' · '}
-                  Trọng số:{' '}
+            {result && (
+              <div
+                className={`mt-3 px-4 py-3 rounded-lg border ${themeClasses.border} ${themeClasses.backgroundTertiary}`}
+              >
+                <div className={`text-sm font-medium ${themeClasses.textSecondary}`}>
+                  CR (Consistency Ratio)
+                </div>
+                <div
+                  className={`mt-1 text-base font-semibold ${
+                    result.isValid ? 'text-emerald-600' : 'text-amber-600'
+                  }`}
+                >
+                  CR = {result.consistencyRatio}{' '}
+                  {result.isValid ? t('ahp.valid') : t('ahp.invalid')}
+                </div>
+                <div className={`mt-2 text-sm ${themeClasses.text}`}>
+                  {t('ahp.weights')}:{' '}
                   {indicatorsInAHOrder
                     .map(
                       (ind, i) => `${getIndicatorLabel(ind)}=${(result.weights[i] ?? 0).toFixed(3)}`
                     )
                     .join(', ')}
                 </div>
+              </div>
+            )}
+            <div className='flex flex-wrap items-center gap-4 mt-4'>
+              {first5MatchLegacy && (
+                <Button variant='secondary' onClick={handleUseDefault}>
+                  {t('ahp.useDefault')}
+                </Button>
+              )}
+              <Button variant='primary' disabled={result?.isValid} onClick={handleCalculate}>
+                {t('ahp.calculateWeights')}
+              </Button>
+              {formik.errors.matrix && typeof formik.errors.matrix === 'string' && (
+                <span className='text-sm text-red-500'>{formik.errors.matrix}</span>
               )}
             </div>
           </>

@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import { IoMdPerson } from 'react-icons/io';
 import { useAuth } from '../../../contexts/AuthContext';
-import logo from '../../../assets/logo.jpg';
+import FloodGuardLogo from '../../../assets/FloodGuardLogo';
 import {
   ADMIN_PATH,
   HOME_PATH,
@@ -24,6 +24,7 @@ import {
   ADMIN_SETTINGS_PATH,
 } from '../../../router/routePath';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { getThemeClasses } from '../../../utils/themeUtils';
 
 export default function AdminSidebar() {
@@ -31,6 +32,7 @@ export default function AdminSidebar() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const themeClasses = getThemeClasses(theme);
 
   const isActive = (path: string) => {
@@ -61,10 +63,10 @@ export default function AdminSidebar() {
       {/* Logo/Header */}
       <div className={`p-6 border-b ${themeClasses.border}`}>
         <div className='flex items-center gap-3 mb-2'>
-          <img src={logo} className='w-15 h-10 rounded-lg' alt='Logo' />
+          <FloodGuardLogo size={40} className='shrink-0 rounded-lg' />
           <div>
-            <h1 className={`text-lg font-bold ${themeClasses.text}`}>Admin Panel</h1>
-            <p className={`text-xs ${themeClasses.textSecondary}`}>Quản trị hệ thống</p>
+            <h1 className={`text-lg font-bold ${themeClasses.text}`}>{t('sidebar.appName')}</h1>
+            <p className={`text-xs ${themeClasses.textSecondary}`}>{t('sidebar.appSubtitle')}</p>
           </div>
         </div>
       </div>
@@ -78,7 +80,7 @@ export default function AdminSidebar() {
           )}`}
         >
           <FaMapMarkedAlt size={20} />
-          <span>Bản đồ ngập lụt</span>
+          <span>{t('sidebar.map')}</span>
         </Link>
 
         <Link
@@ -88,14 +90,14 @@ export default function AdminSidebar() {
           )}`}
         >
           <FaChartBar size={20} />
-          <span>Báo cáo rủi ro</span>
+          <span>{t('sidebar.riskReport')}</span>
         </Link>
 
         <div className={`pt-4 mt-4 border-t ${themeClasses.border}`}>
           <div
             className={`px-4 py-2 text-xs uppercase tracking-wider ${themeClasses.textSecondary}`}
           >
-            Quản lý
+            {t('sidebar.management')}
           </div>
 
           <Link
@@ -105,7 +107,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaMapMarkedAlt size={20} />
-            <span>Quản lý Phường</span>
+            <span>{t('sidebar.wardManagement')}</span>
           </Link>
 
           <Link
@@ -115,7 +117,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaChartLine size={20} />
-            <span>Quản lý chỉ số</span>
+            <span>{t('sidebar.indicatorManagement')}</span>
           </Link>
 
           <Link
@@ -125,7 +127,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaTable size={20} />
-            <span>Quản lý đánh giá rủi ro</span>
+            <span>{t('sidebar.riskAssessmentManagement')}</span>
           </Link>
 
           <Link
@@ -135,7 +137,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaUsers size={20} />
-            <span>Quản lý người dùng</span>
+            <span>{t('sidebar.userManagement')}</span>
           </Link>
 
           <Link
@@ -145,7 +147,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <FaCog size={20} />
-            <span>Cài đặt</span>
+            <span>{t('sidebar.settings')}</span>
           </Link>
         </div>
 
@@ -158,7 +160,7 @@ export default function AdminSidebar() {
             )}`}
           >
             <IoMdPerson size={20} />
-            <span>Thông tin cá nhân</span>
+            <span>{t('sidebar.profile')}</span>
           </Link>
         </div>
       </nav>
@@ -174,7 +176,7 @@ export default function AdminSidebar() {
             }`}
         >
           <FaSignOutAlt size={20} />
-          <span>Đăng xuất</span>
+          <span>{t('sidebar.logout')}</span>
         </button>
       </div>
     </aside>

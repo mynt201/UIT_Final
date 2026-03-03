@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import Graphic from "@arcgis/core/Graphic";
@@ -8,6 +9,7 @@ import TileLayer from "@arcgis/core/layers/TileLayer";
 import Polygon from "@arcgis/core/geometry/Polygon";
 import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
 
+import i18n from "../../../i18n";
 import { useMapWards } from "../../../hooks/useMapWards";
 import { useSettings } from "../../../contexts/SettingsContext";
 import {
@@ -18,6 +20,7 @@ import {
   getRiskLevelLabel,
   getRiskColorFromBackend,
   getRiskOutlineColorFromBackend,
+  type RiskLevelKey,
 } from "./floodRiskUtils";
 import FloodMapLegend from "./FloodMapLegend";
 import WardDetailPanel from "./WardDetailPanel";
@@ -68,12 +71,12 @@ const convertGeoJSONToRings = (
 function backendLevelToInternal(
   backendLevel: string | undefined,
   floodRisk: number,
-): "cao" | "trungBinh" | "thap" | "chuaCoDuLieu" {
+): RiskLevelKey {
   const l = backendLevel?.trim?.() ?? "";
   if (l === "Rất cao" || l === "Cao") return "cao";
   if (l === "Trung bình") return "trungBinh";
   if (l === "Thấp" || l === "Rất thấp") return "thap";
-  if (l === "Chưa có dữ liệu") return "chuaCoDuLieu";
+  if (l === "Chưa có dữ liệu") return null;
   return getRiskLevel(floodRisk);
 }
 
@@ -86,6 +89,7 @@ export default function FloodMapView({
   year = new Date().getFullYear(),
   selectedRiskLevels = ["cao", "trungBinh", "thap"],
 }: FloodMapViewProps) {
+  const { t } = useTranslation();
   const mapDiv = useRef<HTMLDivElement>(null);
   const wardLayerRef = useRef<GraphicsLayer | null>(null);
   const roadsLayerRef = useRef<TileLayer | null>(null);
@@ -137,16 +141,16 @@ export default function FloodMapView({
       zoom: mapZoom,
     };
 
-    // Create additional layers for better map visualization
+    // Create additional layers for better map visualization (i18n.t for initial so effect doesn't depend on t)
     const roadsLayer = new TileLayer({
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer",
-      title: "Đường giao thông",
+      title: i18n.t("pageView.layerRoads"),
       visible: showRoads,
     });
 
     const buildingsLayer = new FeatureLayer({
       url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Administrative_Divisions/FeatureServer/0",
-      title: "Khu vực hành chính",
+      title: i18n.t("pageView.layerAdmin"),
       visible: showBuildings,
       opacity: 0.3,
     });
@@ -170,7 +174,7 @@ export default function FloodMapView({
     viewRef.current = view;
 
     const wardLayer = new GraphicsLayer({
-      title: "Bản đồ rủi ro ngập lụt",
+      title: i18n.t("pageView.layerFloodRisk"),
       opacity: 0.85,
     });
     wardLayerRef.current = wardLayer;
@@ -181,6 +185,15 @@ export default function FloodMapView({
       view.destroy();
     };
   }, [isLoading, showBuildings, showRoads, mapZoom, mapAnimation]);
+
+  // Update layer titles when language changes (avoid recreating whole map)
+  useEffect(() => {
+    if (roadsLayerRef.current) roadsLayerRef.current.title = i18n.t("pageView.layerRoads");
+    if (buildingsLayerRef.current) buildingsLayerRef.current.title = i18n.t("pageView.layerAdmin");
+    if (wardLayerRef.current) wardLayerRef.current.title = i18n.t("pageView.layerFloodRisk");
+    // i18n.language changes when user switches language; useTranslation() triggers re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
 
   useEffect(() => {
     if (!viewRef.current) return;
@@ -277,7 +290,8 @@ export default function FloodMapView({
         ward.risk_level as string | undefined,
         ward.flood_risk ?? 0,
       );
-      const matchesRiskLevel = selectedRiskLevels.includes(internalLevel);
+      const matchesRiskLevel =
+        internalLevel != null && selectedRiskLevels.includes(internalLevel);
 
       const rings = convertGeoJSONToRings(ward.geometry);
       const hasValidGeometry = rings && rings.length > 0;
@@ -325,21 +339,24 @@ export default function FloodMapView({
         spatialReference: { wkid: 4326 },
       });
 
+      const riskLevelLabel = t("pageView.riskLevelLabel");
+      const totalScoreLabel = t("pageView.totalScoreLabel");
+      const clickForDetail = t("pageView.clickForDetail");
       const popupContent = `
-        <div style="min-width: 260px; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="min-width: 260px; font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', system-ui, sans-serif;">
           <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1f2937;">${ward.ward_name}</h2>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
             <div style="width: 24px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); background: ${rgbColor};"></div>
             <div>
-              <div style="font-size: 12px; color: #6b7280;">Mức độ rủi ro</div>
+              <div style="font-size: 12px; color: #6b7280;">${riskLevelLabel}</div>
               <div style="font-size: 16px; font-weight: 600; color: #1f2937;">${levelLabel}</div>
             </div>
           </div>
           <div style="font-size: 13px;">
-            <span style="color: #6b7280;">Tổng điểm (total_score):</span>
+            <span style="color: #6b7280;">${totalScoreLabel}</span>
             <span style="font-weight: 600; color: #1f2937; margin-left: 6px;">${floodRisk != null ? Number(floodRisk).toFixed(2) : "—"}</span>
           </div>
-          <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">Nhấp để xem chi tiết đầy đủ theo DB</div>
+          <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">${clickForDetail}</div>
         </div>
       `;
 
@@ -377,7 +394,8 @@ export default function FloodMapView({
         wardLayerRef.current.add(graphic);
       }
     });
-  }, [selectedRiskLevels, wards]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- i18n.language: re-run when language changes (useTranslation re-renders)
+  }, [selectedRiskLevels, wards, t, i18n.language]);
 
   useEffect(() => {
     const layer = wardLayerRef.current;
@@ -405,7 +423,7 @@ export default function FloodMapView({
       <div className="relative w-full flex-1 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải bản đồ...</p>
+          <p className="text-gray-600">{t("pageView.loadingMap")}</p>
         </div>
       </div>
     );
@@ -416,7 +434,7 @@ export default function FloodMapView({
       <div className="relative w-full flex-1 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="text-red-500 mb-4">⚠️ {error}</div>
-          <p className="text-gray-600">Vui lòng thử lại sau.</p>
+          <p className="text-gray-600">{t("pageView.tryAgainMap")}</p>
         </div>
       </div>
     );
@@ -432,7 +450,7 @@ export default function FloodMapView({
 
       {/* Layer Controls */}
       <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-        <h4 className="text-sm font-semibold mb-2 text-gray-800">Lớp bản đồ</h4>
+        <h4 className="text-sm font-semibold mb-2 text-gray-800">{t("pageView.layerTitle")}</h4>
         <div className="space-y-2">
           <label className="flex items-center text-sm">
             <input
@@ -441,7 +459,7 @@ export default function FloodMapView({
               onChange={(e) => setShowRoads(e.target.checked)}
               className="mr-2"
             />
-            Đường giao thông
+            {t("pageView.layerRoads")}
           </label>
           <label className="flex items-center text-sm">
             <input
@@ -450,7 +468,7 @@ export default function FloodMapView({
               onChange={(e) => setShowBuildings(e.target.checked)}
               className="mr-2"
             />
-            Khu vực hành chính
+            {t("pageView.layerAdmin")}
           </label>
         </div>
       </div>

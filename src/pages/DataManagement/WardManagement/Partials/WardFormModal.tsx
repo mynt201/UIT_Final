@@ -1,4 +1,5 @@
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { getThemeClasses } from '../../../../utils/themeUtils';
 import { Input, Modal, Button } from '../../../../components';
@@ -7,19 +8,6 @@ import type {
   AdministrativeUnitCreatePayload,
 } from '../../../../services/administrativeUnitService';
 import { createPolygonFromCenter } from '../utils';
-
-const createWardSchema = yup.object().shape({
-  name: yup.string().required('Tên phường là bắt buộc').trim().max(100),
-  area_km2: yup.number().min(0).required('Diện tích là bắt buộc'),
-  coordinates: yup
-    .string()
-    .required('Tọa độ bắt buộc (lat,lng)')
-    .test('coords', 'Tọa độ không hợp lệ', (v) => {
-      if (!v?.trim()) return false;
-      const p = v.split(',').map((c) => parseFloat(c.trim()));
-      return p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]);
-    }),
-});
 
 export interface WardFormData {
   name: string;
@@ -50,13 +38,26 @@ export default function WardFormModal({
   onErrorsChange,
   onSubmit,
 }: WardFormModalProps) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
+  const createWardSchema = yup.object().shape({
+    name: yup.string().required(t('wardForm.nameRequired')).trim().max(100),
+    area_km2: yup.number().min(0).required(t('wardForm.areaRequired')),
+    coordinates: yup
+      .string()
+      .required(t('wardForm.coordsRequired'))
+      .test('coords', t('wardForm.coordsInvalid'), (v) => {
+        if (!v?.trim()) return false;
+        const p = v.split(',').map((c) => parseFloat(c.trim()));
+        return p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]);
+      }),
+  });
+
   const handleSubmit = async () => {
-    const schema = editingWard ? createWardSchema : createWardSchema;
     try {
-      await schema.validate(form, { abortEarly: false });
+      await createWardSchema.validate(form, { abortEarly: false });
       onErrorsChange({});
     } catch (err) {
       const e: Record<string, string> = {};
@@ -75,22 +76,22 @@ export default function WardFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingWard ? 'Chỉnh sửa phường' : 'Thêm phường'}
+      title={editingWard ? t('wardModal.editWard') : t('wardModal.addWard')}
       maxWidth='sm'
       footer={
         <div className='flex justify-end gap-3'>
           <Button variant='secondary' onClick={onClose}>
-            Hủy
+            {t('common.cancel')}
           </Button>
           <Button variant='primary' onClick={handleSubmit} disabled={loading}>
-            {editingWard ? 'Cập nhật' : 'Thêm'}
+            {editingWard ? t('common.update') : t('common.add')}
           </Button>
         </div>
       }
     >
       <div className='space-y-4'>
         <Input
-          label='Tên phường *'
+          label={`${t('wardForm.name')} *`}
           value={form.name}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             onChange({ ...form, name: e.target.value })
@@ -99,7 +100,7 @@ export default function WardFormModal({
           placeholder='Ví dụ: Phường Linh Trung'
         />
         <Input
-          label='Diện tích (km²) *'
+          label={`${t('wardForm.area')} *`}
           type='number'
           step='0.01'
           min={0}
@@ -114,7 +115,7 @@ export default function WardFormModal({
         />
         <div>
           <label className={`block text-sm font-medium mb-1 ${themeClasses.text}`}>
-            Tọa độ (lat,lng) *
+            {t('wardForm.coordinates')} *
           </label>
           <input
             type='text'
