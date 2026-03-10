@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { riskAssessmentService } from "../../services/riskAssessmentService";
 import { administrativeUnitService } from "../../services/administrativeUnitService";
+import { indicatorValueService } from "../../services/indicatorValueService";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../constants/roles";
 import { Button, Table, Select } from "../../components";
@@ -38,6 +39,19 @@ export default function RiskAssessmentManagementPage() {
   });
   const allUnits = unitsData?.data ?? [];
 
+  const { data: availableYears = [] } = useQuery({
+    queryKey: ["indicator-values-years", "risk-assessment"],
+    queryFn: () => indicatorValueService.getAvailableYears(null),
+  });
+
+  const yearOptions = useMemo(
+    () => [
+      { value: "all", label: t("riskAssessment.all") },
+      ...availableYears.map((y) => ({ value: String(y), label: String(y) })),
+    ],
+    [availableYears, t]
+  );
+
   const unitIdParam = isWardAdmin ? wardAdminUnitId : unitFilter;
 
   const isAuthenticated = !!currentUser;
@@ -49,12 +63,22 @@ export default function RiskAssessmentManagementPage() {
       unitIdParam || "all",
       riskLevelFilter || "all",
     ],
-    queryFn: () =>
-      riskAssessmentService.getAssessments({
+    queryFn: async () => {
+      const yearsToRefresh =
+        yearFilter !== "" && yearFilter != null
+          ? [Number(yearFilter)]
+          : availableYears.length > 0
+            ? availableYears
+            : [currentYear];
+      for (const yr of yearsToRefresh) {
+        await riskAssessmentService.refreshAssessments(yr);
+      }
+      return riskAssessmentService.getAssessments({
         year: yearFilter || undefined,
         unit_id: unitIdParam || undefined,
         risk_level: riskLevelFilter || undefined,
-      }),
+      });
+    },
     enabled: isAuthenticated,
   });
   const assessments = assessmentsData?.data ?? [];
@@ -143,15 +167,10 @@ export default function RiskAssessmentManagementPage() {
           <div className="flex flex-wrap gap-4 items-end">
             <Select
               label={t("riskAssessment.filterYear")}
-              options={[
-                { value: "all", label: t("riskAssessment.all") },
-                ...[currentYear + 1, currentYear, currentYear - 1, currentYear - 2].map(
-                  (y) => ({ value: String(y), label: String(y) })
-                ),
-              ]}
+              options={yearOptions}
               value={yearFilter === "" ? "all" : String(yearFilter)}
               onChange={(e) =>
-                setYearFilter(e.target.value === "all" ? "" : parseInt(e.target.value))
+                setYearFilter(e.target.value === "all" ? "" : Number(e.target.value))
               }
               className="w-32"
             />

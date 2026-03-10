@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import FloodMapView from "./Partials/FloodMapView";
 import FilterSection from "./Partials/FilterSection";
 import { useMapWards } from "../../hooks/useMapWards";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
+import { indicatorValueService } from "../../services/indicatorValueService";
 
 const PageView = () => {
   const { t } = useTranslation();
@@ -24,6 +26,22 @@ const PageView = () => {
       return next;
     });
   };
+
+  const { data: availableYears = [] } = useQuery({
+    queryKey: ["indicator-values-years", "map"],
+    queryFn: () => indicatorValueService.getAvailableYears(null),
+  });
+  const yearOptions = useMemo(
+    () =>
+      availableYears.length > 0
+        ? availableYears.map((y) => ({ value: String(y), label: String(y) }))
+        : Array.from({ length: 6 }, (_, i) => {
+            const y = currentYear - i;
+            return { value: String(y), label: String(y) };
+          }),
+    [availableYears, currentYear]
+  );
+
   const { isLoading: mapLoading, error: mapError } = useMapWards({ year });
 
   const [selectedRiskLevels, setSelectedRiskLevels] = useState<string[]>([
@@ -84,11 +102,12 @@ const PageView = () => {
         {t("pageView.title")}
       </div>
 
-      {/* Filter Section */}
+      {/* Filter Section: dropdown năm dynamic theo data chỉ số, đổi năm → map refetch theo year */}
       <div className="shrink-0">
         <FilterSection
           year={year}
           onYearChange={handleYearChange}
+          yearOptions={yearOptions}
           selectedRiskLevels={selectedRiskLevels}
           onRiskLevelChange={handleRiskLevelChange}
         />

@@ -74,6 +74,8 @@ export const vi = {
     refreshAssessmentsTitle: 'Tính RI = Σ(weight × normalized_value) và cập nhật risk_assessments',
     saveWeights: 'Lưu trọng số',
     downloadTemplate: 'Tải template',
+    downloadTemplateAll: 'Template tất cả',
+    downloadTemplateWard: 'Template phường',
     uploadCsv: 'Upload CSV',
     add: 'Thêm',
     loading: 'Đang tải...',

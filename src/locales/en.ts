@@ -74,6 +74,8 @@ export const en = {
     refreshAssessmentsTitle: 'Compute RI = Σ(weight × normalized_value) and update risk_assessments',
     saveWeights: 'Save weights',
     downloadTemplate: 'Download template',
+    downloadTemplateAll: 'Template (all)',
+    downloadTemplateWard: 'Template (ward)',
     uploadCsv: 'Upload CSV',
     add: 'Add',
     loading: 'Loading...',

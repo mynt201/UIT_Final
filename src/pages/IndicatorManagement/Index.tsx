@@ -216,6 +216,13 @@ export default function IndicatorManagementPage() {
     mutationFn: (id: string) => floodIndicatorService.deleteIndicator(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["flood-indicators"] });
+      // Xóa cache các trang dùng trọng số AHP để khi mở lại gọi API mới (đánh giá rủi ro, bản đồ, báo cáo)
+      queryClient.removeQueries({ queryKey: ["risk-assessments"] });
+      queryClient.removeQueries({ queryKey: ["map-wards"] });
+      queryClient.removeQueries({ queryKey: ["report-dashboard"] });
+      queryClient.removeQueries({ queryKey: ["report-compare"] });
+      queryClient.removeQueries({ queryKey: ["indicator-values"] });
+      queryClient.removeQueries({ queryKey: ["indicator-values-years"] });
       toast.success(t("indicatorManagement.toastDeleteSuccess"));
       setIndicatorToDelete(null);
     },

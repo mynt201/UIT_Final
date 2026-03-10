@@ -1,24 +1,32 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FormCheckbox, Select } from "../../../components";
 import { options } from "../constants";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getThemeClasses } from "../../../utils/themeUtils";
 
-const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => {
-  const y = new Date().getFullYear() - i;
-  return { value: String(y), label: String(y) };
-});
+export interface YearOption {
+  value: string;
+  label: string;
+}
 
 interface FilterSectionProps {
   year: number;
   onYearChange: (year: number) => void;
+  yearOptions?: YearOption[];
   selectedRiskLevels: string[];
   onRiskLevelChange: (value: string) => void;
 }
 
+const DEFAULT_YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => {
+  const y = new Date().getFullYear() - i;
+  return { value: String(y), label: String(y) };
+});
+
 export default function FilterSection({
   year,
   onYearChange,
+  yearOptions: yearOptionsProp,
   selectedRiskLevels,
   onRiskLevelChange,
 }: FilterSectionProps) {
@@ -30,6 +38,13 @@ export default function FilterSection({
     label: t(opt.labelKey),
   }));
 
+  const yearOptions = useMemo(() => {
+    const base = yearOptionsProp?.length ? yearOptionsProp : DEFAULT_YEAR_OPTIONS;
+    const hasYear = base.some((o) => Number(o.value) === year);
+    if (hasYear) return base;
+    return [{ value: String(year), label: String(year) }, ...base];
+  }, [yearOptionsProp, year]);
+
   return (
     <div
       className={`${themeClasses.backgroundTertiary} p-2 md:p-3 shrink-0 border-b ${themeClasses.border}`}
@@ -40,9 +55,12 @@ export default function FilterSection({
             {t("pageView.filterYear")}
           </div>
           <Select
-            options={YEAR_OPTIONS}
+            options={yearOptions}
             value={String(year)}
-            onChange={(e) => onYearChange(Number(e.target.value))}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v !== "") onYearChange(Number(v));
+            }}
             className="w-28 text-sm"
           />
         </div>

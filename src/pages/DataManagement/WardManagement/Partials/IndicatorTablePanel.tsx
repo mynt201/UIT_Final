@@ -22,6 +22,7 @@ interface IndicatorTablePanelProps {
   selectedWardName: string | null;
   allUnits: AdministrativeUnit[];
   yearFilter: number | "";
+  yearOptions?: { value: string; label: string }[];
   pageData: WardYearIndicatorRow[];
   columns: IndicatorTableColumn[];
   loading: boolean;
@@ -44,16 +45,12 @@ interface IndicatorTablePanelProps {
   onCsvUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const YEAR_OPTIONS = Array.from(
-  { length: 8 },
-  (_, i) => new Date().getFullYear() - i,
-);
-
 export default function IndicatorTablePanel({
   selectedWardId,
   selectedWardName,
   allUnits,
   yearFilter,
+  yearOptions: yearOptionsProp,
   pageData,
   columns,
   loading,
@@ -84,10 +81,12 @@ export default function IndicatorTablePanel({
     ...allUnits.map((u) => ({ value: u._id, label: u.name })),
   ];
 
-  const yearOptions = [
-    { value: "", label: t('wardManagement.allYears') },
-    ...YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) })),
-  ];
+  const yearOptions = Array.isArray(yearOptionsProp) && yearOptionsProp.length > 0
+    ? yearOptionsProp
+    : [
+        { value: "", label: t('wardManagement.allYears') },
+        ...[2025, 2024, 2023, 2022, 2021, 2020].map((y) => ({ value: String(y), label: String(y) })),
+      ];
 
   return (
     <div
@@ -138,7 +137,9 @@ export default function IndicatorTablePanel({
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium disabled:opacity-50"
               >
                 <FaFileDownload size={14} />
-                {t('wardManagement.downloadTemplate')}
+                {selectedWardId
+                  ? t('wardManagement.downloadTemplateWard')
+                  : t('wardManagement.downloadTemplateAll')}
               </Button>
               <label
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer ${

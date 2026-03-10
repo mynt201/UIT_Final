@@ -38,6 +38,17 @@ export const indicatorValueService = {
     return res.data as { success: boolean; data: IndicatorValueRecord[] };
   },
 
+  /** Năm có dữ liệu chỉ số (dynamic theo data upload). unit_id tùy chọn. Mặc định 2020–2025 nếu chưa có data. */
+  async getAvailableYears(unitId?: string | null) {
+    const params: Record<string, string> = {};
+    if (unitId && unitId !== '') params.unit_id = unitId;
+    const res = await api.get<{ success: boolean; years: number[] }>('/indicator-values/years', {
+      params,
+    });
+    const raw = (res.data as { years?: number[] })?.years;
+    return Array.isArray(raw) && raw.length > 0 ? raw : [2025, 2024, 2023, 2022, 2021, 2020];
+  },
+
   async createValue(payload: {
     unit_id: string;
     indicator_id: string;
@@ -75,7 +86,7 @@ export const indicatorValueService = {
     return res.data as { success: boolean; data: IndicatorValueRecord[]; count: number };
   },
 
-  /** Tải template CSV - unit_id và year có thể là "all" cho tất cả */
+  /** Tải template CSV - tiêu đề cột dynamic theo quản lý chỉ số (BE). */
   async downloadTemplate(unitId?: string | null, year?: number | string | null) {
     const params: Record<string, string | number> = {};
     params.unit_id = unitId && unitId !== '' ? unitId : 'all';
@@ -88,11 +99,26 @@ export const indicatorValueService = {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'ChiSoRuiRo_Template.csv');
+    link.setAttribute('download', 'Chi_so_rui_ro_ngap_lut_Template.csv');
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+  },
+
+  /** Upload CSV chỉ số — BE parse và map cột theo chỉ số trong DB (dynamic). */
+  async uploadCsv(file: File, unitId: string) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('unit_id', unitId);
+    const res = await api.post<{
+      success: boolean;
+      data?: IndicatorValueRecord[];
+      count?: number;
+      message?: string;
+      error?: string;
+    }>('/indicator-values/upload-csv', form);
+    return res.data;
   },
 };
 
