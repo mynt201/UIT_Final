@@ -7,7 +7,13 @@ export interface FloodIndicator {
   group_type: string;
   weight: number;
   unit?: string;
-  /** 1 = thuận (giá trị cao = rủi ro cao), 0 = nghịch (giá trị cao = rủi ro thấp) */
+  /**
+   * 1 = Thuận (Mưa, Triều cường, Mật độ dân số): giá trị càng lớn, rủi ro càng cao.
+   *    Chuẩn hóa: I = (X - Xmin) / (Xmax - Xmin).
+   * 0 = Nghịch (Địa hình, Mật độ cống): giá trị càng nhỏ, rủi ro càng cao.
+   *    Chuẩn hóa: I = (Xmax - X) / (Xmax - Xmin).
+   * Xmin, Xmax lấy theo ngưỡng theo từng phường và chỉ số (indicator_thresholds).
+   */
   direction?: 0 | 1;
 }
 
@@ -17,6 +23,7 @@ export interface IndicatorValueRecord {
   indicator_id: { _id: string; code: string; name: string } | string;
   data_year: number;
   raw_value: number;
+  /** Do BE tính khi tạo/cập nhật/upload và lưu DB; FE chỉ đọc. */
   normalized_value: number;
 }
 
@@ -49,20 +56,25 @@ export const indicatorValueService = {
     return Array.isArray(raw) && raw.length > 0 ? raw : [2025, 2024, 2023, 2022, 2021, 2020];
   },
 
+  /**
+   * Tạo bản ghi chỉ số. Chỉ gửi raw_value; BE bắt buộc tính normalized_value từ ngưỡng + direction và lưu DB.
+   */
   async createValue(payload: {
     unit_id: string;
     indicator_id: string;
     data_year: number;
     raw_value: number;
-    normalized_value?: number; // BE tự tính theo min-max và direction
   }) {
     const res = await api.post('/indicator-values', payload);
     return res.data as { success: boolean; data: IndicatorValueRecord };
   },
 
+  /**
+   * Cập nhật bản ghi. Khi gửi raw_value, BE bắt buộc tính lại normalized_value và cập nhật DB.
+   */
   async updateValue(
     id: string,
-    payload: { raw_value?: number; normalized_value?: number }
+    payload: { raw_value?: number }
   ) {
     const res = await api.put(`/indicator-values/${id}`, payload);
     return res.data as { success: boolean; data: IndicatorValueRecord };
@@ -73,13 +85,15 @@ export const indicatorValueService = {
     return res.data as { success: boolean; message: string };
   },
 
+  /**
+   * Bulk upsert chỉ số. Chỉ gửi raw_value; BE bắt buộc tính normalized_value cho từng bản ghi và lưu DB.
+   */
   async bulkUpsert(
     items: Array<{
       unit_id: string;
       indicator_id: string;
       data_year: number;
       raw_value: number;
-      normalized_value?: number; // BE tự tính theo min-max và direction
     }>
   ) {
     const res = await api.post('/indicator-values/bulk-upsert', { items });
@@ -106,7 +120,9 @@ export const indicatorValueService = {
     window.URL.revokeObjectURL(url);
   },
 
-  /** Upload CSV chỉ số — BE parse và map cột theo chỉ số trong DB (dynamic). */
+  /**
+   * Upload CSV chỉ số. BE parse CSV, map cột → raw_value, tính normalized_value cho từng dòng và lưu DB.
+   */
   async uploadCsv(file: File, unitId: string) {
     const form = new FormData();
     form.append('file', file);

@@ -14,6 +14,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
 import { Button, Select, Table, Pagination, StatCard } from "../../components";
 import { reportService } from "../../services/reportService";
+import { indicatorValueService } from "../../services/indicatorValueService";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../constants/roles";
 import { ADMIN_PAGE_VIEW_PATH } from "../../router/routePath";
@@ -44,13 +45,22 @@ export default function RiskReportPage() {
   const { theme } = useTheme();
   const themeClasses = getThemeClasses(theme);
 
+  const { data: availableYears = [] } = useQuery({
+    queryKey: ["indicator-values-years", "risk-report"],
+    queryFn: () => indicatorValueService.getAvailableYears(null),
+  });
+
   const yearOptions = useMemo(
-    () =>
-      Array.from({ length: 6 }, (_, i) => ({
-        value: currentYear - i,
-        label: `${t("riskReport.yearLabel")} ${currentYear - i}`,
-      })),
-    [t]
+    () => {
+      const set = new Set<number>(availableYears);
+      set.add(currentYear);
+      const years = Array.from(set).sort((a, b) => b - a);
+      return years.map((y) => ({
+        value: y,
+        label: `${t("riskReport.yearLabel")} ${y}`,
+      }));
+    },
+    [availableYears, t]
   );
 
   const wardColumns = useMemo(

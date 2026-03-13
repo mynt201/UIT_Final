@@ -129,7 +129,7 @@ export default function IndicatorTablePanel({
           >
             <FaSync className={loading ? "animate-spin" : ""} />
           </button>
-          {canUseTemplateOrUpload && onDownloadTemplate && (
+          {canUseTemplateOrUpload && onDownloadTemplate && selectedWardId && (
             <>
               <Button
                 onClick={onDownloadTemplate}
@@ -137,9 +137,7 @@ export default function IndicatorTablePanel({
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium disabled:opacity-50"
               >
                 <FaFileDownload size={14} />
-                {selectedWardId
-                  ? t('wardManagement.downloadTemplateWard')
-                  : t('wardManagement.downloadTemplateAll')}
+                {t('wardManagement.downloadTemplateWard')}
               </Button>
               <label
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer ${

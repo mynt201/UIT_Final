@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FaChartBar,
   FaChartLine,
+  FaSlidersH,
   FaUsers,
   FaCog,
   FaSignOutAlt,
@@ -16,6 +17,7 @@ import {
   HOME_PATH,
   ADMIN_DATA_MANAGEMENT_PATH,
   ADMIN_INDICATOR_MANAGEMENT_PATH,
+  ADMIN_INDICATOR_THRESHOLD_PATH,
   ADMIN_USER_MANAGEMENT_PATH,
   ADMIN_PAGE_VIEW_PATH,
   ADMIN_RISK_REPORT_PATH,
@@ -118,6 +120,16 @@ export default function AdminSidebar() {
           >
             <FaChartLine size={20} />
             <span>{t('sidebar.indicatorManagement')}</span>
+          </Link>
+
+          <Link
+            to={ADMIN_INDICATOR_THRESHOLD_PATH}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${getActiveClass(
+              ADMIN_INDICATOR_THRESHOLD_PATH
+            )}`}
+          >
+            <FaSlidersH size={20} />
+            <span>{t('sidebar.indicatorThreshold')}</span>
           </Link>
 
           <Link

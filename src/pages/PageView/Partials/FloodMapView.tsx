@@ -118,6 +118,12 @@ export default function FloodMapView({
     useState<WardDetailFromDB | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    name: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Handle roads layer visibility
   useEffect(() => {
@@ -280,6 +286,58 @@ export default function FloodMapView({
     };
   }, [wards, year]);
 
+  // Hover tooltip: set ward name + screen position when mouse moves over polygon
+  useEffect(() => {
+    if (!viewRef.current) return;
+
+    const view = viewRef.current;
+    let moveHandle: __esri.Handle | null = null;
+
+    view
+      .when(() => {
+        moveHandle = view.on(
+          "pointer-move",
+          async (event: __esri.ViewPointerMoveEvent) => {
+            const layer = wardLayerRef.current;
+            if (!layer) return;
+
+            try {
+              const response = await view.hitTest(event, { include: [layer] });
+              const result = response.results.find(
+                (r) =>
+                  "graphic" in r &&
+                  r.graphic &&
+                  r.graphic.attributes?.ward_name,
+              );
+              if (result && "graphic" in result && result.graphic) {
+                const graphic = result.graphic;
+                const wardName = graphic.attributes.ward_name as string;
+                const unitId = (graphic.attributes.unit_id as string) ?? null;
+                setHoverInfo({
+                  name: wardName,
+                  x: event.x,
+                  y: event.y,
+                });
+                setHoveredUnitId(unitId);
+              } else {
+                setHoverInfo(null);
+                setHoveredUnitId(null);
+              }
+            } catch {
+              // ignore hover errors
+            }
+          },
+        );
+      })
+      .catch(() => {});
+
+    return () => {
+      if (moveHandle) {
+        moveHandle.remove();
+      }
+    };
+  }, [wards]);
+
   useEffect(() => {
     if (!wardLayerRef.current || wards.length === 0) return;
 
@@ -408,15 +466,19 @@ export default function FloodMapView({
       const fillColor = (graphic.symbol as __esri.SimpleFillSymbol).color;
 
       const isSelected = uid === selectedUnitId;
+      const isHovered = uid === hoveredUnitId;
       graphic.symbol = new SimpleFillSymbol({
         color: fillColor,
         outline: {
-          width: isSelected ? 3 : 0.8,
-          color: isSelected ? [0, 112, 255, 1] : (stored ?? [0, 0, 0, 0.5]),
+          width: isSelected || isHovered ? 3 : 0.8,
+          color:
+            isSelected || isHovered
+              ? [0, 112, 255, 1]
+              : stored ?? [0, 0, 0, 0.5],
         },
       });
     });
-  }, [selectedUnitId, wards]);
+  }, [selectedUnitId, hoveredUnitId, wards]);
 
   if (isLoading) {
     return (
@@ -447,6 +509,17 @@ export default function FloodMapView({
         className="absolute inset-0 w-full h-full"
         style={{ pointerEvents: "auto" }}
       />
+      {hoverInfo && (
+        <div
+          className="pointer-events-none absolute z-10 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-lg text-sm font-semibold text-gray-900 border border-gray-300"
+          style={{
+            top: hoverInfo.y + 14,
+            left: hoverInfo.x + 14,
+          }}
+        >
+          {hoverInfo.name}
+        </div>
+      )}
 
       {/* Layer Controls */}
       <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">

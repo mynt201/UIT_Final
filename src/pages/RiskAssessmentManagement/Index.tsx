@@ -10,7 +10,7 @@ import { administrativeUnitService } from "../../services/administrativeUnitServ
 import { indicatorValueService } from "../../services/indicatorValueService";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../constants/roles";
-import { Button, Table, Select } from "../../components";
+import { Button, Table, Select, Pagination } from "../../components";
 import { formatNumber } from "../../utils/formatUtils";
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
@@ -32,6 +32,10 @@ export default function RiskAssessmentManagementPage() {
   const [yearFilter, setYearFilter] = useState<number | "">(currentYear);
   const [unitFilter, setUnitFilter] = useState<string>("");
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>("");
+  const [assessmentPagination, setAssessmentPagination] = useState({
+    page: 1,
+    limit: 10,
+  });
 
   const { data: unitsData } = useQuery({
     queryKey: ["administrative-units", "all"],
@@ -82,6 +86,16 @@ export default function RiskAssessmentManagementPage() {
     enabled: isAuthenticated,
   });
   const assessments = assessmentsData?.data ?? [];
+
+  const totalAssessments = assessments.length;
+  const totalAssessmentPages = Math.max(
+    1,
+    Math.ceil(totalAssessments / assessmentPagination.limit),
+  );
+  const pagedAssessments = assessments.slice(
+    (assessmentPagination.page - 1) * assessmentPagination.limit,
+    assessmentPagination.page * assessmentPagination.limit,
+  );
 
   const refreshMutation = useMutation({
     mutationFn: (yr: number) => riskAssessmentService.refreshAssessments(yr),
@@ -216,18 +230,44 @@ export default function RiskAssessmentManagementPage() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table + Pagination */}
         <div
           className={`rounded-lg border overflow-hidden ${themeClasses.border}`}
         >
           {isLoading ? (
-            <div className="p-8 text-center text-gray-500">{t("riskAssessment.loading")}</div>
-          ) : assessments.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {t("riskAssessment.loading")}
+            </div>
+          ) : totalAssessments === 0 ? (
             <div className="p-8 text-center text-gray-500">
               {t("riskAssessment.empty")}
             </div>
           ) : (
-            <Table columns={columns} data={assessments} />
+            <>
+              <Table columns={columns} data={pagedAssessments} />
+              <Pagination
+                page={assessmentPagination.page}
+                totalPages={totalAssessmentPages}
+                totalItems={totalAssessments}
+                pageSize={assessmentPagination.limit}
+                onPageChange={(page) =>
+                  setAssessmentPagination((prev) => ({ ...prev, page }))
+                }
+                label={t("userManagement.paginationShow", {
+                  from:
+                    (assessmentPagination.page - 1) *
+                      assessmentPagination.limit +
+                    1,
+                  to: Math.min(
+                    assessmentPagination.page *
+                      assessmentPagination.limit,
+                    totalAssessments,
+                  ),
+                  total: totalAssessments,
+                })}
+                itemLabel={t("userManagement.paginationItems")}
+              />
+            </>
           )}
         </div>
       </div>

@@ -80,7 +80,7 @@ export default function WardDetailPanel({
                   <span className="text-gray-500">{t("pageView.detail.totalScore")}</span>{" "}
                   <span className="font-semibold text-black">
                     {ward.total_score != null
-                      ? Number(ward.total_score).toFixed(2)
+                      ? formatNumber(ward.total_score, 2)
                       : "—"}
                   </span>
                 </div>
@@ -129,7 +129,7 @@ export default function WardDetailPanel({
                       </div>
                       <div className="text-gray-500 text-xs mt-0.5 break-words overflow-hidden min-w-0">
                         {t("pageView.detail.normalizedValue")}{" "}
-                        {Number(iv.normalized_value ?? 0).toFixed(4)}
+                        {formatNumber(iv.normalized_value, 4)}
                       </div>
                     </div>
                   ))}

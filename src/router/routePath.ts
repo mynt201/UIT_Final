@@ -7,6 +7,7 @@ export const ADMIN_PATH = '/admin';
 export const ADMIN_DASHBOARD_PATH = '/admin';
 export const ADMIN_DATA_MANAGEMENT_PATH = '/admin/data-management';
 export const ADMIN_INDICATOR_MANAGEMENT_PATH = '/admin/indicator-management';
+export const ADMIN_INDICATOR_THRESHOLD_PATH = '/admin/indicator-thresholds';
 export const ADMIN_USER_MANAGEMENT_PATH = '/admin/users';
 export const ADMIN_PAGE_VIEW_PATH = '/admin/map-view';
 export const ADMIN_RISK_REPORT_PATH = '/admin/risk-report';

@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as yup from "yup";
 import { FaPlus, FaEdit, FaTrash, FaChartLine, FaSync } from "react-icons/fa";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getThemeClasses } from "../../utils/themeUtils";
-import { Modal, Button, Table } from "../../components";
+import { Modal, Button, Table, Pagination } from "../../components";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -26,6 +26,20 @@ import {
   DEFAULT_AHP_MATRIX_5,
 } from "../DataManagement/WardManagement/constants";
 
+function getIndicatorsInAHOrder(
+  indicators: FloodIndicator[],
+): FloodIndicator[] {
+  const codeToInd = Object.fromEntries(indicators.map((i) => [i.code, i]));
+  const ordered: FloodIndicator[] = [];
+  for (const code of LEGACY_AHP_ORDER) {
+    if (codeToInd[code]) ordered.push(codeToInd[code]);
+  }
+  for (const ind of indicators) {
+    if (!LEGACY_AHP_ORDER.includes(ind.code)) ordered.push(ind);
+  }
+  return ordered;
+}
+
 const defaultForm: IndicatorFormData = {
   code: "",
   name: "",
@@ -45,13 +59,8 @@ const indicatorSchema = yup.object().shape({
     .required("Tên chỉ số là bắt buộc")
     .trim()
     .max(200, "Tên chỉ số không được vượt quá 200 ký tự"),
-  group_type: yup
-    .string()
-    .required("Nhóm là bắt buộc"),
-  unit: yup
-    .string()
-    .max(50, "Đơn vị không được vượt quá 50 ký tự")
-    .nullable(),
+  group_type: yup.string().required("Nhóm là bắt buộc"),
+  unit: yup.string().max(50, "Đơn vị không được vượt quá 50 ký tự").nullable(),
   direction: yup
     .number()
     .oneOf([0, 1], "Hướng phải là 0 hoặc 1")
@@ -79,26 +88,32 @@ export default function IndicatorManagementPage() {
   const [ahpModalOpen, setAhpModalOpen] = useState(false);
   const [ahpMatrix, setAhpMatrix] = useState<number[][]>([]);
   const [ahpResult, setAhpResult] = useState<AHPResult | null>(null);
+  const [indicatorPagination, setIndicatorPagination] = useState({
+    page: 1,
+    limit: 10,
+  });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["flood-indicators"],
     queryFn: () => floodIndicatorService.getIndicators(),
   });
   const indicators: FloodIndicator[] = data?.data ?? [];
+  const indicatorsInAHOrder = getIndicatorsInAHOrder(indicators);
+  const totalIndicators = indicators.length;
+  const indicatorTotalPages = Math.max(
+    1,
+    Math.ceil(totalIndicators / indicatorPagination.limit),
+  );
+  const pagedIndicators = indicators.slice(
+    (indicatorPagination.page - 1) * indicatorPagination.limit,
+    indicatorPagination.page * indicatorPagination.limit,
+  );
 
-  const indicatorsInAHOrder = useMemo(() => {
-    const codeToInd = Object.fromEntries(indicators.map((i) => [i.code, i]));
-    const ordered: FloodIndicator[] = [];
-    for (const code of LEGACY_AHP_ORDER) {
-      if (codeToInd[code]) ordered.push(codeToInd[code]);
-    }
-    for (const ind of indicators) {
-      if (!LEGACY_AHP_ORDER.includes(ind.code)) ordered.push(ind);
-    }
-    return ordered;
-  }, [indicators]);
-
-  const indicatorColumns = useMemo(() => [
+  const indicatorColumns: Array<{
+    header: string;
+    accessor: keyof FloodIndicator | "_id";
+    render?: (value: unknown, row: FloodIndicator) => React.ReactNode;
+  }> = [
     {
       header: t("indicatorManagement.colCode"),
       accessor: "code" as const,
@@ -109,7 +124,10 @@ export default function IndicatorManagementPage() {
       accessor: "name" as const,
       render: (_: unknown, row: FloodIndicator) => getIndicatorLabel(row),
     },
-    { header: t("indicatorManagement.colGroup"), accessor: "group_type" as const },
+    {
+      header: t("indicatorManagement.colGroup"),
+      accessor: "group_type" as const,
+    },
     {
       header: t("indicatorManagement.colWeight"),
       accessor: "weight" as const,
@@ -137,7 +155,9 @@ export default function IndicatorManagementPage() {
               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
           }`}
         >
-          {row.direction === 0 ? t("indicatorManagement.directionInverse") : t("indicatorManagement.directionDirect")}
+          {row.direction === 0
+            ? t("indicatorManagement.directionInverse")
+            : t("indicatorManagement.directionDirect")}
         </span>
       ),
     },
@@ -147,8 +167,8 @@ export default function IndicatorManagementPage() {
             header: t("indicatorManagement.colActions"),
             accessor: "_id" as const,
             render: (_: unknown, row: FloodIndicator) => (
-              <div className="flex gap-1 justify-end">
-                <button
+              <div className="flex gap-1">
+                <Button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpenEdit(row);
@@ -157,8 +177,9 @@ export default function IndicatorManagementPage() {
                   title={t("common.edit")}
                 >
                   <FaEdit size={14} />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIndicatorToDelete(row);
@@ -167,13 +188,13 @@ export default function IndicatorManagementPage() {
                   title={t("common.delete")}
                 >
                   <FaTrash size={14} />
-                </button>
+                </Button>
               </div>
             ),
           },
         ]
       : []),
-  ], [t, isSuperAdmin]);
+  ];
 
   const createMut = useMutation({
     mutationFn: (p: FloodIndicatorCreatePayload) =>
@@ -378,12 +399,31 @@ export default function IndicatorManagementPage() {
 
           <Table<FloodIndicator>
             columns={indicatorColumns}
-            data={indicators}
+            data={pagedIndicators}
             emptyMessage={
               isSuperAdmin
                 ? t("indicatorManagement.noIndicatorsAdd")
                 : t("indicatorManagement.noIndicatorsShort")
             }
+          />
+          <Pagination
+            page={indicatorPagination.page}
+            totalPages={indicatorTotalPages}
+            totalItems={totalIndicators}
+            pageSize={indicatorPagination.limit}
+            onPageChange={(page) =>
+              setIndicatorPagination((prev) => ({ ...prev, page }))
+            }
+            label={t("userManagement.paginationShow", {
+              from:
+                (indicatorPagination.page - 1) * indicatorPagination.limit + 1,
+              to: Math.min(
+                indicatorPagination.page * indicatorPagination.limit,
+                totalIndicators,
+              ),
+              total: totalIndicators,
+            })}
+            itemLabel={t("userManagement.paginationItems")}
           />
         </div>
       </div>

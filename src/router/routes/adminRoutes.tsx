@@ -4,6 +4,7 @@ import { AdminLayout, RoleGuard } from '../../components';
 import { ADMIN_ROLES } from '../../constants/roles';
 import DataManagementPage from '../../pages/DataManagement/Index';
 import IndicatorManagementPage from '../../pages/IndicatorManagement/Index';
+import IndicatorThresholdManagementPage from '../../pages/IndicatorThresholdManagement/Index';
 import UserManagementPage from '../../pages/UserManagement/Index';
 import { ADMIN_PATH, ADMIN_PAGE_VIEW_PATH, ADMIN_RISK_ASSESSMENT_MANAGEMENT_PATH } from '../routePath';
 import PageView from '../../pages/PageView/Index';
@@ -32,6 +33,10 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'indicator-management',
         element: <IndicatorManagementPage />,
+      },
+      {
+        path: 'indicator-thresholds',
+        element: <IndicatorThresholdManagementPage />,
       },
       {
         path: 'users',

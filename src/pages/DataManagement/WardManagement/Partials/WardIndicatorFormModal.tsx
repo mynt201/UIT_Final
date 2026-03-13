@@ -120,15 +120,12 @@ export default function WardIndicatorFormModal({
           })}
         </div>
         <p className={`text-xs ${themeClasses.textSecondary}`}>
+          Chuẩn hóa theo phường, chỉ số và năm. Thuận (lượng mưa, triều cường, mật độ dân số — giá trị càng lớn, rủi ro càng cao): I = (X − Xmin) / (Xmax − Xmin). Nghịch (địa hình, mật độ cống — giá trị càng nhỏ, rủi ro càng cao): I = (Xmax − X) / (Xmax − Xmin).
           {thuậnCodes.length > 0 && (
-            <>Thuận ({thuậnCodes.join(', ')}): (giá trị − min) / (max − min).</>
+            <> Thuận: {thuậnCodes.join(', ')}.</>
           )}
-          {thuậnCodes.length > 0 && nghịchCodes.length > 0 && ' '}
           {nghịchCodes.length > 0 && (
-            <>Nghịch ({nghịchCodes.join(', ')}): (max − giá trị) / (max − min).</>
-          )}
-          {thuậnCodes.length === 0 && nghịchCodes.length === 0 && (
-            <>Chuẩn hóa theo direction của từng chỉ số.</>
+            <> Nghịch: {nghịchCodes.join(', ')}.</>
           )}
         </p>
       </div>
